@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="sw">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fredi VCF - Jiandikishe Sasa!</title>
+    <title>Fredi VCF - Contact Registration</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -71,6 +71,56 @@
             border-radius: 20px;
             font-weight: 600;
             animation: pulse 2s infinite;
+        }
+
+        .registration-form {
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: var(--shadow);
+            margin-bottom: 30px;
+            animation: slideUp 0.5s ease;
+        }
+
+        .form-title {
+            color: var(--primary);
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary);
+            outline: none;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
         }
 
         .dashboard-grid {
@@ -302,52 +352,81 @@
             color: #25D366;
         }
 
-        .registration-form {
-            background: var(--card-bg);
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: var(--shadow);
-            margin-top: 30px;
+        /* Notification Styles */
+        .notification-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            max-width: 350px;
         }
 
-        .form-title {
-            color: var(--primary);
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: var(--dark);
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 12px 15px;
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            font-size: 1rem;
-            transition: border-color 0.3s ease;
-        }
-
-        .form-control:focus {
-            border-color: var(--primary);
-            outline: none;
-        }
-
-        .form-row {
+        .notification {
+            background: white;
+            border-radius: 10px;
+            padding: 15px 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
             display: flex;
+            align-items: center;
             gap: 15px;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            border-left: 4px solid var(--primary);
         }
 
-        .form-row .form-group {
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            border-left-color: var(--success);
+        }
+
+        .notification.warning {
+            border-left-color: var(--warning);
+        }
+
+        .notification.info {
+            border-left-color: var(--primary);
+        }
+
+        .notification-icon {
+            font-size: 1.5rem;
+        }
+
+        .notification.success .notification-icon {
+            color: var(--success);
+        }
+
+        .notification.warning .notification-icon {
+            color: var(--warning);
+        }
+
+        .notification.info .notification-icon {
+            color: var(--primary);
+        }
+
+        .notification-content {
             flex: 1;
+        }
+
+        .notification-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .notification-message {
+            font-size: 0.9rem;
+            color: var(--gray);
+        }
+
+        .notification-close {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: var(--gray);
         }
 
         @keyframes fadeIn {
@@ -383,10 +462,18 @@
                 flex-direction: column;
                 gap: 0;
             }
+            
+            .notification-container {
+                left: 20px;
+                right: 20px;
+                max-width: none;
+            }
         }
     </style>
 </head>
 <body>
+    <div class="notification-container" id="notificationContainer"></div>
+
     <div class="container">
         <header>
             <div class="logo">
@@ -394,14 +481,50 @@
                 <h1>Fredi VCF Dashboard</h1>
             </div>
             <div class="status-badge">
-                <i class="fas fa-sync-alt"></i> Auto-Save Inatumika
+                <i class="fas fa-sync-alt"></i> Auto-Save Active
             </div>
         </header>
+
+        <div class="registration-form">
+            <h2 class="form-title">Registration Form</h2>
+            <form id="registrationForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="fullName">Full Name</label>
+                        <input type="text" id="fullName" class="form-control" placeholder="Enter your full name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="phoneNumber">Phone Number</label>
+                        <input type="tel" id="phoneNumber" class="form-control" placeholder="+255 XXX XXX XXX" required>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="email">Email Address</label>
+                        <input type="email" id="email" class="form-control" placeholder="example@email.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="work">Occupation</label>
+                        <input type="text" id="work" class="form-control" placeholder="Your occupation" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="notes">Additional Information</label>
+                    <textarea id="notes" class="form-control" rows="3" placeholder="Add any additional information..."></textarea>
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    <i class="fas fa-user-plus"></i> Register Now
+                </button>
+            </form>
+        </div>
 
         <div class="dashboard-grid">
             <div class="card">
                 <div class="card-header">
-                    <h2 class="card-title">Waliokwisha Jiandikisha</h2>
+                    <h2 class="card-title">Total Registrations</h2>
                     <div class="card-icon bg-primary">
                         <i class="fas fa-users"></i>
                     </div>
@@ -417,37 +540,37 @@
                     </div>
                 </div>
                 <p style="margin-top: 15px; color: var(--gray);">
-                    <span id="remaining-slots">1000</span> nafasi zimesalia
+                    <span id="remaining-slots">1000</span> slots remaining
                 </p>
             </div>
 
             <div class="card">
                 <div class="card-header">
-                    <h2 class="card-title">Muda Wa Usajili</h2>
+                    <h2 class="card-title">Registration Period</h2>
                     <div class="card-icon bg-success">
                         <i class="fas fa-clock"></i>
                     </div>
                 </div>
-                <div class="stat-number">Siku 3</div>
+                <div class="stat-number">3 Days</div>
                 <div class="countdown">
                     <div class="countdown-item">
                         <div class="countdown-value" id="countdown-days">3</div>
-                        <div class="countdown-label">Siku</div>
+                        <div class="countdown-label">Days</div>
                     </div>
                     <div class="countdown-item">
                         <div class="countdown-value" id="countdown-hours">0</div>
-                        <div class="countdown-label">Masaa</div>
+                        <div class="countdown-label">Hours</div>
                     </div>
                     <div class="countdown-item">
                         <div class="countdown-value" id="countdown-minutes">0</div>
-                        <div class="countdown-label">Dakika</div>
+                        <div class="countdown-label">Minutes</div>
                     </div>
                 </div>
             </div>
 
             <div class="card">
                 <div class="card-header">
-                    <h2 class="card-title">Hifadhi Ya Data</h2>
+                    <h2 class="card-title">Storage Status</h2>
                     <div class="card-icon bg-warning">
                         <i class="fas fa-database"></i>
                     </div>
@@ -463,61 +586,14 @@
                     </div>
                 </div>
                 <p style="margin-top: 15px; color: var(--gray);">
-                    Hifadhi tupu inayosubiri kujazwa
+                    Empty storage waiting to be filled
                 </p>
             </div>
         </div>
 
-        <div class="registration-form">
-            <h2 class="form-title">Fomu Ya Usajili</h2>
-            <form id="registrationForm">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="fullName">Jina Kamili</label>
-                        <input type="text" id="fullName" class="form-control" placeholder="Weka jina lako kamili" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="phoneNumber">Namba Ya Simu</label>
-                        <input type="tel" id="phoneNumber" class="form-control" placeholder="+255 XXX XXX XXX" required>
-                    </div>
-                </div>
-                
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="email">Barua Pepe</label>
-                        <input type="email" id="email" class="form-control" placeholder="example@email.com" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="work">Kazi</label>
-                        <input type="text" id="work" class="form-control" placeholder="Kazi yako" required>
-                    </div>
-                </div>
-                
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="location">Mahali</label>
-                        <input type="text" id="location" class="form-control" placeholder="Mkoa/Mji" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="photo">Picha</label>
-                        <input type="file" id="photo" class="form-control" accept="image/*">
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="notes">Maelezo Zaidi</label>
-                    <textarea id="notes" class="form-control" rows="3" placeholder="Weka maelezo yoyote ya ziada..."></textarea>
-                </div>
-                
-                <button type="submit" class="btn btn-primary" style="width: 100%;">
-                    <i class="fas fa-user-plus"></i> Jisajili Sasa
-                </button>
-            </form>
-        </div>
-
         <div class="card">
             <div class="card-header">
-                <h2 class="card-title">Waliokwisha Jisajili (Hivi Punde)</h2>
+                <h2 class="card-title">Recent Registrations</h2>
                 <div class="card-icon bg-primary">
                     <i class="fas fa-list"></i>
                 </div>
@@ -526,19 +602,18 @@
                 <table class="registrations-table">
                     <thead>
                         <tr>
-                            <th>Mtumiaji</th>
-                            <th>Simu</th>
-                            <th>Barua Pepe</th>
-                            <th>Kazi</th>
-                            <th>Tarehe Ya Usajili</th>
+                            <th>User</th>
+                            <th>Phone</th>
+                            <th>Email</th>
+                            <th>Occupation</th>
+                            <th>Registration Date</th>
                         </tr>
                     </thead>
                     <tbody id="registrations-body">
-                        <!-- Hakuna wasajili bado -->
                         <tr>
                             <td colspan="5" style="text-align: center; padding: 30px; color: var(--gray);">
                                 <i class="fas fa-users" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
-                                Hakuna wasajili bado. Wa kwanza kuandikisha!
+                                No registrations yet. Be the first to register!
                             </td>
                         </tr>
                     </tbody>
@@ -548,39 +623,39 @@
 
         <div class="action-buttons">
             <button class="btn btn-primary" onclick="shareToWhatsApp()">
-                <i class="fab fa-whatsapp"></i> Sambaza Kwenye WhatsApp
+                <i class="fab fa-whatsapp"></i> Share on WhatsApp
             </button>
             <button class="btn btn-success" id="download-btn" disabled>
-                <i class="fas fa-download"></i> Pakua VCF
+                <i class="fas fa-download"></i> Download VCF
             </button>
             <button class="btn btn-warning">
-                <i class="fas fa-cog"></i> Mipangilio
+                <i class="fas fa-cog"></i> Settings
             </button>
         </div>
 
         <div class="whatsapp-channel">
             <i class="fab fa-whatsapp"></i>
             <div>
-                <h3>Kijiwe cha WhatsApp - Jiunge Sasa!</h3>
-                <p>Kutumia Whiskey Baileys kwa ajili ya kuhifadhi taarifa. Wote waliojisajili watafuata kijiwe hiki kiotomatiki.</p>
+                <h3>WhatsApp Channel - Join Now!</h3>
+                <p>Using Whiskey Baileys for data storage. All registered users will automatically follow this channel.</p>
                 <a href="https://whatsapp.com/channel/0029VbAjdiWBFLgXpS7VJz1u" target="_blank" style="color: var(--primary); text-decoration: none;">
-                    Jiunge Sasa <i class="fas fa-external-link-alt"></i>
+                    Join Now <i class="fas fa-external-link-alt"></i>
                 </a>
             </div>
         </div>
 
         <div id="download-section" class="download-section hidden">
             <i class="fas fa-file-download" style="font-size: 4rem; color: var(--success); margin-bottom: 20px;"></i>
-            <h2>Faili Ya VCF Tayari Kupakuliwa</h2>
-            <p>Muda wa usajili umeisha au idadi kubwa ya wasajili imefikiwa. Sasa unaweza kupakua faili kamili ya VCF iliyo na taarifa zote za mawasiliano.</p>
-            <button class="btn btn-success" style="margin: 0 auto;">
-                <i class="fas fa-download"></i> Pakua Faili Ya VCF
+            <h2>VCF File Ready for Download</h2>
+            <p>The registration period has ended or the maximum number of registrations has been reached. You can now download the complete VCF file containing all contact information.</p>
+            <button class="btn btn-success" style="margin: 0 auto;" onclick="downloadVCF()">
+                <i class="fas fa-download"></i> Download VCF File
             </button>
         </div>
     </div>
 
     <script>
-        // Data storage - tupu kwa sasa
+        // Data storage - empty initially
         let registrations = [];
         let registrationCount = 0;
         const maxRegistrations = 1000;
@@ -592,8 +667,9 @@
         const downloadBtn = document.getElementById('download-btn');
         const registrationsBody = document.getElementById('registrations-body');
         const registrationForm = document.getElementById('registrationForm');
+        const notificationContainer = document.getElementById('notificationContainer');
         
-        // Countdown timer - siku 3 kuanzia sasa
+        // Countdown timer - 3 days from now
         const countdownDays = document.getElementById('countdown-days');
         const countdownHours = document.getElementById('countdown-hours');
         const countdownMinutes = document.getElementById('countdown-minutes');
@@ -601,6 +677,45 @@
         // Set countdown to 3 days from now
         const endTime = new Date();
         endTime.setDate(endTime.getDate() + 3);
+        
+        // Notification system
+        function showNotification(title, message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <div class="notification-icon">
+                    ${type === 'success' ? '<i class="fas fa-check-circle"></i>' : 
+                      type === 'warning' ? '<i class="fas fa-exclamation-triangle"></i>' : 
+                      '<i class="fas fa-info-circle"></i>'}
+                </div>
+                <div class="notification-content">
+                    <div class="notification-title">${title}</div>
+                    <div class="notification-message">${message}</div>
+                </div>
+                <button class="notification-close" onclick="this.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            
+            notificationContainer.appendChild(notification);
+            
+            // Show notification with animation
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 100);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.classList.remove('show');
+                    setTimeout(() => {
+                        if (notification.parentElement) {
+                            notificationContainer.removeChild(notification);
+                        }
+                    }, 300);
+                }
+            }, 5000);
+        }
         
         function updateCountdown() {
             const now = new Date();
@@ -612,6 +727,12 @@
                 countdownMinutes.textContent = '0';
                 downloadSection.classList.remove('hidden');
                 downloadBtn.disabled = false;
+                
+                showNotification(
+                    'Registration Period Ended', 
+                    'The 3-day registration period has ended. VCF file is now available for download.',
+                    'warning'
+                );
                 return;
             }
             
@@ -622,6 +743,23 @@
             countdownDays.textContent = days;
             countdownHours.textContent = hours;
             countdownMinutes.textContent = minutes;
+            
+            // Notifications for time milestones
+            if (days === 1 && hours === 0 && minutes === 0) {
+                showNotification(
+                    '24 Hours Remaining', 
+                    'Only 1 day left to register for the VCF file. Share with friends!',
+                    'warning'
+                );
+            }
+            
+            if (days === 0 && hours === 1 && minutes === 0) {
+                showNotification(
+                    '1 Hour Remaining', 
+                    'Only 1 hour left to register. Complete your registration now!',
+                    'warning'
+                );
+            }
         }
         
         // Update countdown every minute
@@ -637,7 +775,6 @@
             const phoneNumber = document.getElementById('phoneNumber').value;
             const email = document.getElementById('email').value;
             const work = document.getElementById('work').value;
-            const location = document.getElementById('location').value;
             const notes = document.getElementById('notes').value;
             
             // Create new registration
@@ -647,7 +784,6 @@
                 phone: phoneNumber,
                 email: email,
                 work: work,
-                location: location,
                 notes: notes,
                 date: new Date().toISOString().split('T')[0]
             };
@@ -659,6 +795,13 @@
             // Update UI
             updateRegistrationUI();
             
+            // Show success notification
+            showNotification(
+                'Registration Successful!', 
+                `Thank you ${fullName}! Your contact has been added to the VCF file.`,
+                'success'
+            );
+            
             // Reset form
             registrationForm.reset();
             
@@ -666,6 +809,37 @@
             if (registrationCount >= maxRegistrations) {
                 downloadSection.classList.remove('hidden');
                 downloadBtn.disabled = false;
+                
+                showNotification(
+                    'Registration Limit Reached!', 
+                    'Maximum of 1000 registrations achieved. VCF file is now available for download.',
+                    'success'
+                );
+            }
+            
+            // Notify about progress milestones
+            if (registrationCount === 1) {
+                showNotification(
+                    'First Registration!', 
+                    'You are the first person to register. Share with friends to grow the contact list.',
+                    'info'
+                );
+            }
+            
+            if (registrationCount === 500) {
+                showNotification(
+                    'Halfway There!', 
+                    'We have reached 500 registrations. Only 500 more slots available!',
+                    'info'
+                );
+            }
+            
+            if (registrationCount === 900) {
+                showNotification(
+                    'Almost Full!', 
+                    'Only 100 registration slots remaining. Share quickly before time runs out!',
+                    'warning'
+                );
             }
         });
         
@@ -682,7 +856,7 @@
                     <tr>
                         <td colspan="5" style="text-align: center; padding: 30px; color: var(--gray);">
                             <i class="fas fa-users" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
-                            Hakuna wasajili bado. Wa kwanza kuandikisha!
+                            No registrations yet. Be the first to register!
                         </td>
                     </tr>
                 `;
@@ -716,13 +890,48 @@
         }
         
         function shareToWhatsApp() {
-            const text = `Jiandikishe kwenye Fredi VCF! \n\nUsajili wa bure wa namba za simu kwa ajili ya VCF file. \n\nJiunge sasa: ${window.location.href} \n\nPia jiunge na kijiwe chetu cha WhatsApp: https://whatsapp.com/channel/0029VbAjdiWBFLgXpS7VJz1u`;
+            const text = `Register for Fredi VCF! \n\nFree phone number registration for VCF file. \n\nJoin now: ${window.location.href} \n\nAlso join our WhatsApp channel: https://whatsapp.com/channel/0029VbAjdiWBFLgXpS7VJz1u`;
             const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
             window.open(url, '_blank');
+            
+            showNotification(
+                'Share on WhatsApp', 
+                'The registration link has been prepared for sharing on WhatsApp.',
+                'info'
+            );
+        }
+        
+        function downloadVCF() {
+            // In a real implementation, this would generate and download a VCF file
+            // For demo purposes, we'll just show a notification
+            
+            showNotification(
+                'VCF Download Started', 
+                'Your VCF file is being prepared with all registered contacts.',
+                'success'
+            );
+            
+            // Simulate download process
+            setTimeout(() => {
+                showNotification(
+                    'Download Complete!', 
+                    'Your VCF file has been downloaded successfully. You can now import it to your contacts.',
+                    'success'
+                );
+            }, 2000);
         }
         
         // Initialize with empty state
         updateRegistrationUI();
+        
+        // Show welcome notification
+        setTimeout(() => {
+            showNotification(
+                'Welcome to Fredi VCF!', 
+                'Register your contact to be included in the VCF file. Share with friends!',
+                'info'
+            );
+        }, 1000);
     </script>
 </body>
 </html>
