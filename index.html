@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fredi VCF Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #4361ee;
+            --secondary: #3f37c9;
+            --success: #4cc9f0;
+            --warning: #f72585;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --gray: #6c757d;
+            --card-bg: rgba(255, 255, 255, 0.9);
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: var(--dark);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            margin-bottom: 30px;
+            animation: fadeIn 1s ease;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo i {
+            font-size: 2.5rem;
+            color: var(--success);
+        }
+
+        .logo h1 {
+            font-size: 2rem;
+            color: white;
+            font-weight: 700;
+        }
+
+        .status-badge {
+            background: var(--warning);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            animation: pulse 2s infinite;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: var(--shadow);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            animation: slideUp 0.5s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .card-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .bg-primary {
+            background: rgba(67, 97, 238, 0.2);
+            color: var(--primary);
+        }
+
+        .bg-success {
+            background: rgba(76, 201, 240, 0.2);
+            color: var(--success);
+        }
+
+        .bg-warning {
+            background: rgba(247, 37, 133, 0.2);
+            color: var(--warning);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .progress-container {
+            margin-top: 15px;
+        }
+
+        .progress-bar {
+            height: 10px;
+            background: #e9ecef;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .progress {
+            height: 100%;
+            background: linear-gradient(to right, var(--primary), var(--success));
+            border-radius: 5px;
+            transition: width 1.5s ease;
+        }
+
+        .progress-text {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px;
+            font-size: 0.9rem;
+            color: var(--gray);
+        }
+
+        .countdown {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .countdown-item {
+            text-align: center;
+            flex: 1;
+        }
+
+        .countdown-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary);
+            padding: 10px;
+            background: rgba(67, 97, 238, 0.1);
+            border-radius: 10px;
+        }
+
+        .countdown-label {
+            font-size: 0.8rem;
+            margin-top: 5px;
+            color: var(--gray);
+        }
+
+        .registrations-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .registrations-table th, 
+        .registrations-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .registrations-table th {
+            background: rgba(67, 97, 238, 0.1);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .registrations-table tr:hover {
+            background: rgba(67, 97, 238, 0.05);
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-warning {
+            background: var(--warning);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .download-section {
+            text-align: center;
+            padding: 40px;
+            background: var(--card-bg);
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+            margin-top: 30px;
+            animation: fadeIn 1s ease;
+        }
+
+        .download-section h2 {
+            color: var(--primary);
+            margin-bottom: 20px;
+        }
+
+        .download-section p {
+            color: var(--gray);
+            margin-bottom: 30px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .whatsapp-channel {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(37, 211, 102, 0.1);
+            border-radius: 10px;
+        }
+
+        .whatsapp-channel i {
+            font-size: 2rem;
+            color: #25D366;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .countdown {
+                flex-wrap: wrap;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class="fas fa-address-book"></i>
+                <h1>Fredi VCF Dashboard</h1>
+            </div>
+            <div class="status-badge">
+                <i class="fas fa-sync-alt"></i> Auto-Sync Active
+            </div>
+        </header>
+
+        <div class="dashboard-grid">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Total Registrations</h2>
+                    <div class="card-icon bg-primary">
+                        <i class="fas fa-users"></i>
+                    </div>
+                </div>
+                <div class="stat-number" id="total-registrations">742</div>
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress" id="registration-progress" style="width: 74.2%"></div>
+                    </div>
+                    <div class="progress-text">
+                        <span>0</span>
+                        <span>1000</span>
+                    </div>
+                </div>
+                <p style="margin-top: 15px; color: var(--gray);">
+                    <span id="remaining-slots">258</span> slots remaining
+                </p>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Registration Period</h2>
+                    <div class="card-icon bg-success">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                </div>
+                <div class="stat-number">3 Days</div>
+                <div class="countdown">
+                    <div class="countdown-item">
+                        <div class="countdown-value" id="countdown-days">2</div>
+                        <div class="countdown-label">Days</div>
+                    </div>
+                    <div class="countdown-item">
+                        <div class="countdown-value" id="countdown-hours">14</div>
+                        <div class="countdown-label">Hours</div>
+                    </div>
+                    <div class="countdown-item">
+                        <div class="countdown-value" id="countdown-minutes">36</div>
+                        <div class="countdown-label">Minutes</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Storage Status</h2>
+                    <div class="card-icon bg-warning">
+                        <i class="fas fa-database"></i>
+                    </div>
+                </div>
+                <div class="stat-number">2.8 GB / 5 GB</div>
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress" style="width: 56%"></div>
+                    </div>
+                    <div class="progress-text">
+                        <span>0 GB</span>
+                        <span>5 GB</span>
+                    </div>
+                </div>
+                <p style="margin-top: 15px; color: var(--gray);">
+                    Sufficient storage for long-term data retention
+                </p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Recent Registrations</h2>
+                <div class="card-icon bg-primary">
+                    <i class="fas fa-list"></i>
+                </div>
+            </div>
+            <div class="table-container">
+                <table class="registrations-table">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Phone</th>
+                            <th>Email</th>
+                            <th>Work</th>
+                            <th>Registration Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <img src="https://randomuser.me/api/portraits/men/32.jpg" class="user-avatar" alt="User">
+                                John Doe
+                            </td>
+                            <td>+255 789 123 456</td>
+                            <td>john.doe@example.com</td>
+                            <td>Software Engineer</td>
+                            <td>2023-10-15</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <img src="https://randomuser.me/api/portraits/women/44.jpg" class="user-avatar" alt="User">
+                                Jane Smith
+                            </td>
+                            <td>+255 755 987 654</td>
+                            <td>jane.smith@example.com</td>
+                            <td>Marketing Manager</td>
+                            <td>2023-10-15</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <img src="https://randomuser.me/api/portraits/men/67.jpg" class="user-avatar" alt="User">
+                                Robert Johnson
+                            </td>
+                            <td>+255 784 456 789</td>
+                            <td>robert.j@example.com</td>
+                            <td>Business Analyst</td>
+                            <td>2023-10-14</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <img src="https://randomuser.me/api/portraits/women/68.jpg" class="user-avatar" alt="User">
+                                Maria Garcia
+                            </td>
+                            <td>+255 713 654 321</td>
+                            <td>maria.g@example.com</td>
+                            <td>Product Designer</td>
+                            <td>2023-10-14</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <img src="https://randomuser.me/api/portraits/men/75.jpg" class="user-avatar" alt="User">
+                                David Wilson
+                            </td>
+                            <td>+255 767 321 987</td>
+                            <td>david.w@example.com</td>
+                            <td>Data Scientist</td>
+                            <td>2023-10-13</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button class="btn btn-primary">
+                <i class="fas fa-sync-alt"></i> Refresh Data
+            </button>
+            <button class="btn btn-success">
+                <i class="fas fa-download"></i> Export to CSV
+            </button>
+            <button class="btn btn-warning">
+                <i class="fas fa-cog"></i> Settings
+            </button>
+        </div>
+
+        <div class="whatsapp-channel">
+            <i class="fab fa-whatsapp"></i>
+            <div>
+                <h3>WhatsApp Channel Auto-Follow</h3>
+                <p>Using Whiskey Baileys for logs. All registered users are automatically added to the WhatsApp channel.</p>
+                <a href="https://whatsapp.com/channel/0029VbAjdiWBFLgXpS7VJz1u" target="_blank" style="color: var(--primary); text-decoration: none;">
+                    Join Channel <i class="fas fa-external-link-alt"></i>
+                </a>
+            </div>
+        </div>
+
+        <div id="download-section" class="download-section hidden">
+            <i class="fas fa-file-download" style="font-size: 4rem; color: var(--success); margin-bottom: 20px;"></i>
+            <h2>VCF File Ready for Download</h2>
+            <p>The registration period has ended or the maximum number of registrations has been reached. You can now download the complete VCF file containing all contact information.</p>
+            <button class="btn btn-success" style="margin: 0 auto;">
+                <i class="fas fa-download"></i> Download VCF File
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Simulate registration count updates
+        let registrations = 742;
+        const maxRegistrations = 1000;
+        const registrationProgress = document.getElementById('registration-progress');
+        const totalRegistrationsElement = document.getElementById('total-registrations');
+        const remainingSlotsElement = document.getElementById('remaining-slots');
+        const downloadSection = document.getElementById('download-section');
+        
+        // Update registration count every 5 seconds
+        setInterval(() => {
+            if (registrations < maxRegistrations) {
+                // Random increment between 1 and 5
+                const increment = Math.floor(Math.random() * 5) + 1;
+                registrations = Math.min(registrations + increment, maxRegistrations);
+                
+                // Update UI
+                totalRegistrationsElement.textContent = registrations;
+                const progressPercent = (registrations / maxRegistrations) * 100;
+                registrationProgress.style.width = `${progressPercent}%`;
+                remainingSlotsElement.textContent = maxRegistrations - registrations;
+                
+                // Check if we reached the limit
+                if (registrations >= maxRegistrations) {
+                    downloadSection.classList.remove('hidden');
+                }
+            }
+        }, 5000);
+        
+        // Countdown timer simulation
+        const countdownDays = document.getElementById('countdown-days');
+        const countdownHours = document.getElementById('countdown-hours');
+        const countdownMinutes = document.getElementById('countdown-minutes');
+        
+        // Set initial values (2 days, 14 hours, 36 minutes)
+        let days = 2;
+        let hours = 14;
+        let minutes = 36;
+        
+        // Update countdown every minute
+        setInterval(() => {
+            minutes--;
+            if (minutes < 0) {
+                minutes = 59;
+                hours--;
+                if (hours < 0) {
+                    hours = 23;
+                    days--;
+                    if (days < 0) {
+                        days = 0;
+                        hours = 0;
+                        minutes = 0;
+                        // Show download section when time is up
+                        downloadSection.classList.remove('hidden');
+                    }
+                }
+            }
+            
+            countdownDays.textContent = days;
+            countdownHours.textContent = hours;
+            countdownMinutes.textContent = minutes;
+        }, 60000);
+    </script>
+</body>
+</html>
