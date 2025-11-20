@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="sw">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fredi VCF Dashboard</title>
+    <title>Fredi VCF - Jiandikishe Sasa!</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -15,7 +15,7 @@
             --light: #f8f9fa;
             --dark: #212529;
             --gray: #6c757d;
-            --card-bg: rgba(255, 255, 255, 0.9);
+            --card-bg: rgba(255, 255, 255, 0.95);
             --shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
         }
 
@@ -302,6 +302,54 @@
             color: #25D366;
         }
 
+        .registration-form {
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: var(--shadow);
+            margin-top: 30px;
+        }
+
+        .form-title {
+            color: var(--primary);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary);
+            outline: none;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
@@ -330,6 +378,11 @@
             .action-buttons {
                 flex-direction: column;
             }
+            
+            .form-row {
+                flex-direction: column;
+                gap: 0;
+            }
         }
     </style>
 </head>
@@ -341,22 +394,22 @@
                 <h1>Fredi VCF Dashboard</h1>
             </div>
             <div class="status-badge">
-                <i class="fas fa-sync-alt"></i> Auto-Sync Active
+                <i class="fas fa-sync-alt"></i> Auto-Save Inatumika
             </div>
         </header>
 
         <div class="dashboard-grid">
             <div class="card">
                 <div class="card-header">
-                    <h2 class="card-title">Total Registrations</h2>
+                    <h2 class="card-title">Waliokwisha Jiandikisha</h2>
                     <div class="card-icon bg-primary">
                         <i class="fas fa-users"></i>
                     </div>
                 </div>
-                <div class="stat-number" id="total-registrations">742</div>
+                <div class="stat-number" id="total-registrations">0</div>
                 <div class="progress-container">
                     <div class="progress-bar">
-                        <div class="progress" id="registration-progress" style="width: 74.2%"></div>
+                        <div class="progress" id="registration-progress" style="width: 0%"></div>
                     </div>
                     <div class="progress-text">
                         <span>0</span>
@@ -364,45 +417,45 @@
                     </div>
                 </div>
                 <p style="margin-top: 15px; color: var(--gray);">
-                    <span id="remaining-slots">258</span> slots remaining
+                    <span id="remaining-slots">1000</span> nafasi zimesalia
                 </p>
             </div>
 
             <div class="card">
                 <div class="card-header">
-                    <h2 class="card-title">Registration Period</h2>
+                    <h2 class="card-title">Muda Wa Usajili</h2>
                     <div class="card-icon bg-success">
                         <i class="fas fa-clock"></i>
                     </div>
                 </div>
-                <div class="stat-number">3 Days</div>
+                <div class="stat-number">Siku 3</div>
                 <div class="countdown">
                     <div class="countdown-item">
-                        <div class="countdown-value" id="countdown-days">2</div>
-                        <div class="countdown-label">Days</div>
+                        <div class="countdown-value" id="countdown-days">3</div>
+                        <div class="countdown-label">Siku</div>
                     </div>
                     <div class="countdown-item">
-                        <div class="countdown-value" id="countdown-hours">14</div>
-                        <div class="countdown-label">Hours</div>
+                        <div class="countdown-value" id="countdown-hours">0</div>
+                        <div class="countdown-label">Masaa</div>
                     </div>
                     <div class="countdown-item">
-                        <div class="countdown-value" id="countdown-minutes">36</div>
-                        <div class="countdown-label">Minutes</div>
+                        <div class="countdown-value" id="countdown-minutes">0</div>
+                        <div class="countdown-label">Dakika</div>
                     </div>
                 </div>
             </div>
 
             <div class="card">
                 <div class="card-header">
-                    <h2 class="card-title">Storage Status</h2>
+                    <h2 class="card-title">Hifadhi Ya Data</h2>
                     <div class="card-icon bg-warning">
                         <i class="fas fa-database"></i>
                     </div>
                 </div>
-                <div class="stat-number">2.8 GB / 5 GB</div>
+                <div class="stat-number">0 GB / 5 GB</div>
                 <div class="progress-container">
                     <div class="progress-bar">
-                        <div class="progress" style="width: 56%"></div>
+                        <div class="progress" style="width: 0%"></div>
                     </div>
                     <div class="progress-text">
                         <span>0 GB</span>
@@ -410,14 +463,61 @@
                     </div>
                 </div>
                 <p style="margin-top: 15px; color: var(--gray);">
-                    Sufficient storage for long-term data retention
+                    Hifadhi tupu inayosubiri kujazwa
                 </p>
             </div>
         </div>
 
+        <div class="registration-form">
+            <h2 class="form-title">Fomu Ya Usajili</h2>
+            <form id="registrationForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="fullName">Jina Kamili</label>
+                        <input type="text" id="fullName" class="form-control" placeholder="Weka jina lako kamili" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="phoneNumber">Namba Ya Simu</label>
+                        <input type="tel" id="phoneNumber" class="form-control" placeholder="+255 XXX XXX XXX" required>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="email">Barua Pepe</label>
+                        <input type="email" id="email" class="form-control" placeholder="example@email.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="work">Kazi</label>
+                        <input type="text" id="work" class="form-control" placeholder="Kazi yako" required>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="location">Mahali</label>
+                        <input type="text" id="location" class="form-control" placeholder="Mkoa/Mji" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="photo">Picha</label>
+                        <input type="file" id="photo" class="form-control" accept="image/*">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="notes">Maelezo Zaidi</label>
+                    <textarea id="notes" class="form-control" rows="3" placeholder="Weka maelezo yoyote ya ziada..."></textarea>
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    <i class="fas fa-user-plus"></i> Jisajili Sasa
+                </button>
+            </form>
+        </div>
+
         <div class="card">
             <div class="card-header">
-                <h2 class="card-title">Recent Registrations</h2>
+                <h2 class="card-title">Waliokwisha Jisajili (Hivi Punde)</h2>
                 <div class="card-icon bg-primary">
                     <i class="fas fa-list"></i>
                 </div>
@@ -426,63 +526,20 @@
                 <table class="registrations-table">
                     <thead>
                         <tr>
-                            <th>User</th>
-                            <th>Phone</th>
-                            <th>Email</th>
-                            <th>Work</th>
-                            <th>Registration Date</th>
+                            <th>Mtumiaji</th>
+                            <th>Simu</th>
+                            <th>Barua Pepe</th>
+                            <th>Kazi</th>
+                            <th>Tarehe Ya Usajili</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="registrations-body">
+                        <!-- Hakuna wasajili bado -->
                         <tr>
-                            <td>
-                                <img src="https://randomuser.me/api/portraits/men/32.jpg" class="user-avatar" alt="User">
-                                John Doe
+                            <td colspan="5" style="text-align: center; padding: 30px; color: var(--gray);">
+                                <i class="fas fa-users" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
+                                Hakuna wasajili bado. Wa kwanza kuandikisha!
                             </td>
-                            <td>+255 789 123 456</td>
-                            <td>john.doe@example.com</td>
-                            <td>Software Engineer</td>
-                            <td>2023-10-15</td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <img src="https://randomuser.me/api/portraits/women/44.jpg" class="user-avatar" alt="User">
-                                Jane Smith
-                            </td>
-                            <td>+255 755 987 654</td>
-                            <td>jane.smith@example.com</td>
-                            <td>Marketing Manager</td>
-                            <td>2023-10-15</td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <img src="https://randomuser.me/api/portraits/men/67.jpg" class="user-avatar" alt="User">
-                                Robert Johnson
-                            </td>
-                            <td>+255 784 456 789</td>
-                            <td>robert.j@example.com</td>
-                            <td>Business Analyst</td>
-                            <td>2023-10-14</td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <img src="https://randomuser.me/api/portraits/women/68.jpg" class="user-avatar" alt="User">
-                                Maria Garcia
-                            </td>
-                            <td>+255 713 654 321</td>
-                            <td>maria.g@example.com</td>
-                            <td>Product Designer</td>
-                            <td>2023-10-14</td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <img src="https://randomuser.me/api/portraits/men/75.jpg" class="user-avatar" alt="User">
-                                David Wilson
-                            </td>
-                            <td>+255 767 321 987</td>
-                            <td>david.w@example.com</td>
-                            <td>Data Scientist</td>
-                            <td>2023-10-13</td>
                         </tr>
                     </tbody>
                 </table>
@@ -490,100 +547,182 @@
         </div>
 
         <div class="action-buttons">
-            <button class="btn btn-primary">
-                <i class="fas fa-sync-alt"></i> Refresh Data
+            <button class="btn btn-primary" onclick="shareToWhatsApp()">
+                <i class="fab fa-whatsapp"></i> Sambaza Kwenye WhatsApp
             </button>
-            <button class="btn btn-success">
-                <i class="fas fa-download"></i> Export to CSV
+            <button class="btn btn-success" id="download-btn" disabled>
+                <i class="fas fa-download"></i> Pakua VCF
             </button>
             <button class="btn btn-warning">
-                <i class="fas fa-cog"></i> Settings
+                <i class="fas fa-cog"></i> Mipangilio
             </button>
         </div>
 
         <div class="whatsapp-channel">
             <i class="fab fa-whatsapp"></i>
             <div>
-                <h3>WhatsApp Channel Auto-Follow</h3>
-                <p>Using Whiskey Baileys for logs. All registered users are automatically added to the WhatsApp channel.</p>
+                <h3>Kijiwe cha WhatsApp - Jiunge Sasa!</h3>
+                <p>Kutumia Whiskey Baileys kwa ajili ya kuhifadhi taarifa. Wote waliojisajili watafuata kijiwe hiki kiotomatiki.</p>
                 <a href="https://whatsapp.com/channel/0029VbAjdiWBFLgXpS7VJz1u" target="_blank" style="color: var(--primary); text-decoration: none;">
-                    Join Channel <i class="fas fa-external-link-alt"></i>
+                    Jiunge Sasa <i class="fas fa-external-link-alt"></i>
                 </a>
             </div>
         </div>
 
         <div id="download-section" class="download-section hidden">
             <i class="fas fa-file-download" style="font-size: 4rem; color: var(--success); margin-bottom: 20px;"></i>
-            <h2>VCF File Ready for Download</h2>
-            <p>The registration period has ended or the maximum number of registrations has been reached. You can now download the complete VCF file containing all contact information.</p>
+            <h2>Faili Ya VCF Tayari Kupakuliwa</h2>
+            <p>Muda wa usajili umeisha au idadi kubwa ya wasajili imefikiwa. Sasa unaweza kupakua faili kamili ya VCF iliyo na taarifa zote za mawasiliano.</p>
             <button class="btn btn-success" style="margin: 0 auto;">
-                <i class="fas fa-download"></i> Download VCF File
+                <i class="fas fa-download"></i> Pakua Faili Ya VCF
             </button>
         </div>
     </div>
 
     <script>
-        // Simulate registration count updates
-        let registrations = 742;
+        // Data storage - tupu kwa sasa
+        let registrations = [];
+        let registrationCount = 0;
         const maxRegistrations = 1000;
+        
         const registrationProgress = document.getElementById('registration-progress');
         const totalRegistrationsElement = document.getElementById('total-registrations');
         const remainingSlotsElement = document.getElementById('remaining-slots');
         const downloadSection = document.getElementById('download-section');
+        const downloadBtn = document.getElementById('download-btn');
+        const registrationsBody = document.getElementById('registrations-body');
+        const registrationForm = document.getElementById('registrationForm');
         
-        // Update registration count every 5 seconds
-        setInterval(() => {
-            if (registrations < maxRegistrations) {
-                // Random increment between 1 and 5
-                const increment = Math.floor(Math.random() * 5) + 1;
-                registrations = Math.min(registrations + increment, maxRegistrations);
-                
-                // Update UI
-                totalRegistrationsElement.textContent = registrations;
-                const progressPercent = (registrations / maxRegistrations) * 100;
-                registrationProgress.style.width = `${progressPercent}%`;
-                remainingSlotsElement.textContent = maxRegistrations - registrations;
-                
-                // Check if we reached the limit
-                if (registrations >= maxRegistrations) {
-                    downloadSection.classList.remove('hidden');
-                }
-            }
-        }, 5000);
-        
-        // Countdown timer simulation
+        // Countdown timer - siku 3 kuanzia sasa
         const countdownDays = document.getElementById('countdown-days');
         const countdownHours = document.getElementById('countdown-hours');
         const countdownMinutes = document.getElementById('countdown-minutes');
         
-        // Set initial values (2 days, 14 hours, 36 minutes)
-        let days = 2;
-        let hours = 14;
-        let minutes = 36;
+        // Set countdown to 3 days from now
+        const endTime = new Date();
+        endTime.setDate(endTime.getDate() + 3);
         
-        // Update countdown every minute
-        setInterval(() => {
-            minutes--;
-            if (minutes < 0) {
-                minutes = 59;
-                hours--;
-                if (hours < 0) {
-                    hours = 23;
-                    days--;
-                    if (days < 0) {
-                        days = 0;
-                        hours = 0;
-                        minutes = 0;
-                        // Show download section when time is up
-                        downloadSection.classList.remove('hidden');
-                    }
-                }
+        function updateCountdown() {
+            const now = new Date();
+            const timeLeft = endTime - now;
+            
+            if (timeLeft <= 0) {
+                countdownDays.textContent = '0';
+                countdownHours.textContent = '0';
+                countdownMinutes.textContent = '0';
+                downloadSection.classList.remove('hidden');
+                downloadBtn.disabled = false;
+                return;
             }
+            
+            const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
             
             countdownDays.textContent = days;
             countdownHours.textContent = hours;
             countdownMinutes.textContent = minutes;
-        }, 60000);
+        }
+        
+        // Update countdown every minute
+        setInterval(updateCountdown, 60000);
+        updateCountdown(); // Initial call
+        
+        // Handle form submission
+        registrationForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Get form values
+            const fullName = document.getElementById('fullName').value;
+            const phoneNumber = document.getElementById('phoneNumber').value;
+            const email = document.getElementById('email').value;
+            const work = document.getElementById('work').value;
+            const location = document.getElementById('location').value;
+            const notes = document.getElementById('notes').value;
+            
+            // Create new registration
+            const newRegistration = {
+                id: Date.now(),
+                name: fullName,
+                phone: phoneNumber,
+                email: email,
+                work: work,
+                location: location,
+                notes: notes,
+                date: new Date().toISOString().split('T')[0]
+            };
+            
+            // Add to registrations array
+            registrations.push(newRegistration);
+            registrationCount++;
+            
+            // Update UI
+            updateRegistrationUI();
+            
+            // Reset form
+            registrationForm.reset();
+            
+            // Check if we reached the limit
+            if (registrationCount >= maxRegistrations) {
+                downloadSection.classList.remove('hidden');
+                downloadBtn.disabled = false;
+            }
+        });
+        
+        function updateRegistrationUI() {
+            // Update count and progress
+            totalRegistrationsElement.textContent = registrationCount;
+            const progressPercent = (registrationCount / maxRegistrations) * 100;
+            registrationProgress.style.width = `${progressPercent}%`;
+            remainingSlotsElement.textContent = maxRegistrations - registrationCount;
+            
+            // Update table
+            if (registrationCount === 0) {
+                registrationsBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 30px; color: var(--gray);">
+                            <i class="fas fa-users" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
+                            Hakuna wasajili bado. Wa kwanza kuandikisha!
+                        </td>
+                    </tr>
+                `;
+            } else {
+                let tableHTML = '';
+                // Show latest 5 registrations
+                const recentRegistrations = [...registrations].reverse().slice(0, 5);
+                
+                recentRegistrations.forEach(reg => {
+                    tableHTML += `
+                        <tr>
+                            <td>
+                                <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(reg.name)}&background=random" class="user-avatar" alt="User">
+                                ${reg.name}
+                            </td>
+                            <td>${reg.phone}</td>
+                            <td>${reg.email}</td>
+                            <td>${reg.work}</td>
+                            <td>${reg.date}</td>
+                        </tr>
+                    `;
+                });
+                
+                registrationsBody.innerHTML = tableHTML;
+            }
+            
+            // Enable download button if we have at least one registration
+            if (registrationCount > 0) {
+                downloadBtn.disabled = false;
+            }
+        }
+        
+        function shareToWhatsApp() {
+            const text = `Jiandikishe kwenye Fredi VCF! \n\nUsajili wa bure wa namba za simu kwa ajili ya VCF file. \n\nJiunge sasa: ${window.location.href} \n\nPia jiunge na kijiwe chetu cha WhatsApp: https://whatsapp.com/channel/0029VbAjdiWBFLgXpS7VJz1u`;
+            const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+            window.open(url, '_blank');
+        }
+        
+        // Initialize with empty state
+        updateRegistrationUI();
     </script>
 </body>
 </html>
