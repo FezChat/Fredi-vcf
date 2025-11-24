@@ -6,6 +6,50 @@
     <title>Fredi VCF - Contact Registration</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Firebase Storage Integration -->
+    <script type="module">
+        // Import Firebase modules
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-analytics.js";
+        import { 
+            getStorage, 
+            ref, 
+            uploadBytes, 
+            getDownloadURL,
+            listAll,
+            deleteObject 
+        } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-storage.js";
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyB2jwbNHZhnWJWszdnQ-Eiud8rS0hAF1PI",
+            authDomain: "fredi-ai.firebaseapp.com",
+            projectId: "fredi-ai",
+            storageBucket: "fredi-ai.firebasestorage.app",
+            messagingSenderId: "612087815858",
+            appId: "1:612087815858:web:07ebe516d46f65495af3ab",
+            measurementId: "G-DCP4DKN42Z"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const storage = getStorage(app);
+
+        // Make Firebase Storage available globally
+        window.firebaseStorage = storage;
+        window.firebaseStorageFunctions = {
+            uploadBytes,
+            getDownloadURL,
+            ref,
+            listAll,
+            deleteObject
+        };
+
+        console.log("Firebase Storage initialized successfully");
+    </script>
+
     <style>
         :root {
             --primary: #4361ee;
@@ -310,46 +354,85 @@
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
 
-        .download-section {
-            text-align: center;
-            padding: 40px;
+        .file-upload-section {
             background: var(--card-bg);
             border-radius: 15px;
+            padding: 25px;
             box-shadow: var(--shadow);
-            margin-top: 30px;
-            animation: fadeIn 1s ease;
+            margin-bottom: 30px;
         }
 
-        .download-section h2 {
-            color: var(--primary);
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
             margin-bottom: 20px;
         }
 
-        .download-section p {
+        .upload-area:hover {
+            border-color: var(--primary);
+            background: rgba(67, 97, 238, 0.05);
+        }
+
+        .upload-area i {
+            font-size: 3rem;
             color: var(--gray);
-            margin-bottom: 30px;
-            max-width: 600px;
-            margin-left: auto;
-            margin-right: auto;
+            margin-bottom: 15px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .uploaded-files {
+            margin-top: 20px;
+        }
+
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            background: white;
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .file-icon {
+            font-size: 1.5rem;
+            color: var(--primary);
+        }
+
+        .file-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .file-action-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2rem;
+            color: var(--gray);
+            transition: color 0.3s ease;
+        }
+
+        .file-action-btn:hover {
+            color: var(--primary);
         }
 
         .hidden {
             display: none;
-        }
-
-        .whatsapp-channel {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-top: 20px;
-            padding: 15px;
-            background: rgba(37, 211, 102, 0.1);
-            border-radius: 10px;
-        }
-
-        .whatsapp-channel i {
-            font-size: 2rem;
-            color: #25D366;
         }
 
         /* Notification Styles */
@@ -481,12 +564,12 @@
                 <h1>Fredi VCF Dashboard</h1>
             </div>
             <div class="status-badge">
-                <i class="fas fa-sync-alt"></i> Auto-Save Active
+                <i class="fas fa-cloud"></i> Firebase Storage Active
             </div>
         </header>
 
         <div class="registration-form">
-            <h2 class="form-title">Registration Form</h2>
+            <h2 class="form-title">Contact Registration Form</h2>
             <form id="registrationForm">
                 <div class="form-row">
                     <div class="form-group">
@@ -516,9 +599,23 @@
                 </div>
                 
                 <button type="submit" class="btn btn-primary" style="width: 100%;">
-                    <i class="fas fa-user-plus"></i> Register Now
+                    <i class="fas fa-user-plus"></i> Register Contact
                 </button>
             </form>
+        </div>
+
+        <!-- File Upload Section -->
+        <div class="file-upload-section">
+            <h2 class="form-title">Upload Files to Firebase Storage</h2>
+            <div class="upload-area" id="uploadArea">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <h3>Click to Upload Files</h3>
+                <p>Supported files: Images, PDF, Documents (Max: 10MB)</p>
+                <input type="file" id="fileInput" class="file-input" multiple>
+            </div>
+            <div class="uploaded-files" id="uploadedFiles">
+                <!-- Uploaded files will appear here -->
+            </div>
         </div>
 
         <div class="dashboard-grid">
@@ -575,18 +672,18 @@
                         <i class="fas fa-database"></i>
                     </div>
                 </div>
-                <div class="stat-number">0 GB / 5 GB</div>
+                <div class="stat-number" id="storage-used">0 MB</div>
                 <div class="progress-container">
                     <div class="progress-bar">
-                        <div class="progress" style="width: 0%"></div>
+                        <div class="progress" id="storage-progress" style="width: 0%"></div>
                     </div>
                     <div class="progress-text">
-                        <span>0 GB</span>
-                        <span>5 GB</span>
+                        <span id="storage-current">0 MB</span>
+                        <span id="storage-total">5 GB</span>
                     </div>
                 </div>
-                <p style="margin-top: 15px; color: var(--gray);">
-                    Empty storage waiting to be filled
+                <p style="margin-top: 15px; color: var(--gray);" id="storage-status">
+                    Ready for file uploads
                 </p>
             </div>
         </div>
@@ -625,51 +722,40 @@
             <button class="btn btn-primary" onclick="shareToWhatsApp()">
                 <i class="fab fa-whatsapp"></i> Share on WhatsApp
             </button>
-            <button class="btn btn-success" id="download-btn" disabled>
+            <button class="btn btn-success" id="download-btn" onclick="downloadVCF()">
                 <i class="fas fa-download"></i> Download VCF
             </button>
-            <button class="btn btn-warning">
-                <i class="fas fa-cog"></i> Settings
-            </button>
-        </div>
-
-        <div class="whatsapp-channel">
-            <i class="fab fa-whatsapp"></i>
-            <div>
-                <h3>WhatsApp Channel - Join Now!</h3>
-                <p>Using Whiskey Baileys for data storage. All registered users will automatically follow this channel.</p>
-                <a href="https://whatsapp.com/channel/0029VbAjdiWBFLgXpS7VJz1u" target="_blank" style="color: var(--primary); text-decoration: none;">
-                    Join Now <i class="fas fa-external-link-alt"></i>
-                </a>
-            </div>
-        </div>
-
-        <div id="download-section" class="download-section hidden">
-            <i class="fas fa-file-download" style="font-size: 4rem; color: var(--success); margin-bottom: 20px;"></i>
-            <h2>VCF File Ready for Download</h2>
-            <p>The registration period has ended or the maximum number of registrations has been reached. You can now download the complete VCF file containing all contact information.</p>
-            <button class="btn btn-success" style="margin: 0 auto;" onclick="downloadVCF()">
-                <i class="fas fa-download"></i> Download VCF File
+            <button class="btn btn-warning" onclick="clearAllData()">
+                <i class="fas fa-trash"></i> Clear Data
             </button>
         </div>
     </div>
 
     <script>
-        // Data storage - empty initially
-        let registrations = [];
-        let registrationCount = 0;
+        // Data storage
+        let registrations = JSON.parse(localStorage.getItem('frediRegistrations')) || [];
+        let registrationCount = registrations.length;
         const maxRegistrations = 1000;
+        let uploadedFiles = JSON.parse(localStorage.getItem('frediUploadedFiles')) || [];
         
+        // DOM Elements
         const registrationProgress = document.getElementById('registration-progress');
         const totalRegistrationsElement = document.getElementById('total-registrations');
         const remainingSlotsElement = document.getElementById('remaining-slots');
-        const downloadSection = document.getElementById('download-section');
         const downloadBtn = document.getElementById('download-btn');
         const registrationsBody = document.getElementById('registrations-body');
         const registrationForm = document.getElementById('registrationForm');
         const notificationContainer = document.getElementById('notificationContainer');
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const uploadedFilesContainer = document.getElementById('uploadedFiles');
+        const storageUsedElement = document.getElementById('storage-used');
+        const storageProgressElement = document.getElementById('storage-progress');
+        const storageCurrentElement = document.getElementById('storage-current');
+        const storageTotalElement = document.getElementById('storage-total');
+        const storageStatusElement = document.getElementById('storage-status');
         
-        // Countdown timer - 3 days from now
+        // Countdown timer
         const countdownDays = document.getElementById('countdown-days');
         const countdownHours = document.getElementById('countdown-hours');
         const countdownMinutes = document.getElementById('countdown-minutes');
@@ -678,6 +764,50 @@
         const endTime = new Date();
         endTime.setDate(endTime.getDate() + 3);
         
+        // Firebase Storage Functions
+        async function uploadToFirebase(file) {
+            try {
+                if (!window.firebaseStorage) {
+                    throw new Error('Firebase Storage not initialized');
+                }
+
+                const { ref, uploadBytes, getDownloadURL } = window.firebaseStorageFunctions;
+                
+                // Create a reference to the file in Firebase Storage
+                const storageRef = ref(window.firebaseStorage, `fredi-files/${Date.now()}_${file.name}`);
+                
+                // Upload the file
+                const snapshot = await uploadBytes(storageRef, file);
+                
+                // Get the download URL
+                const downloadURL = await getDownloadURL(snapshot.ref);
+                
+                return {
+                    name: file.name,
+                    size: file.size,
+                    type: file.type,
+                    url: downloadURL,
+                    uploadedAt: new Date().toISOString(),
+                    storagePath: snapshot.ref.fullPath
+                };
+            } catch (error) {
+                console.error('Error uploading to Firebase:', error);
+                throw error;
+            }
+        }
+
+        async function deleteFromFirebase(storagePath) {
+            try {
+                const { ref, deleteObject } = window.firebaseStorageFunctions;
+                const fileRef = ref(window.firebaseStorage, storagePath);
+                await deleteObject(fileRef);
+                return true;
+            } catch (error) {
+                console.error('Error deleting from Firebase:', error);
+                throw error;
+            }
+        }
+
         // Notification system
         function showNotification(title, message, type = 'info') {
             const notification = document.createElement('div');
@@ -699,12 +829,10 @@
             
             notificationContainer.appendChild(notification);
             
-            // Show notification with animation
             setTimeout(() => {
                 notification.classList.add('show');
             }, 100);
             
-            // Auto remove after 5 seconds
             setTimeout(() => {
                 if (notification.parentElement) {
                     notification.classList.remove('show');
@@ -725,12 +853,9 @@
                 countdownDays.textContent = '0';
                 countdownHours.textContent = '0';
                 countdownMinutes.textContent = '0';
-                downloadSection.classList.remove('hidden');
-                downloadBtn.disabled = false;
-                
                 showNotification(
                     'Registration Period Ended', 
-                    'The 3-day registration period has ended. VCF file is now available for download.',
+                    'The 3-day registration period has ended.',
                     'warning'
                 );
                 return;
@@ -743,41 +868,210 @@
             countdownDays.textContent = days;
             countdownHours.textContent = hours;
             countdownMinutes.textContent = minutes;
-            
-            // Notifications for time milestones
-            if (days === 1 && hours === 0 && minutes === 0) {
-                showNotification(
-                    '24 Hours Remaining', 
-                    'Only 1 day left to register for the VCF file. Share with friends!',
-                    'warning'
-                );
-            }
-            
-            if (days === 0 && hours === 1 && minutes === 0) {
-                showNotification(
-                    '1 Hour Remaining', 
-                    'Only 1 hour left to register. Complete your registration now!',
-                    'warning'
-                );
-            }
         }
         
         // Update countdown every minute
         setInterval(updateCountdown, 60000);
-        updateCountdown(); // Initial call
+        updateCountdown();
+        
+        // File upload handling
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', async (e) => {
+            const files = e.target.files;
+            if (files.length === 0) return;
+
+            for (let file of files) {
+                await handleFileUpload(file);
+            }
+            
+            // Reset file input
+            fileInput.value = '';
+        });
+
+        async function handleFileUpload(file) {
+            // Validate file size (10MB max)
+            const maxSize = 10 * 1024 * 1024;
+            if (file.size > maxSize) {
+                showNotification(
+                    'File Too Large', 
+                    `File "${file.name}" exceeds 10MB limit.`,
+                    'warning'
+                );
+                return;
+            }
+
+            // Validate file type
+            const allowedTypes = [
+                'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+                'application/pdf', 
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            ];
+            
+            if (!allowedTypes.includes(file.type)) {
+                showNotification(
+                    'Invalid File Type', 
+                    `File type not supported for "${file.name}".`,
+                    'warning'
+                );
+                return;
+            }
+
+            try {
+                showNotification(
+                    'Uploading File', 
+                    `Uploading "${file.name}" to Firebase Storage...`,
+                    'info'
+                );
+
+                const fileData = await uploadToFirebase(file);
+                uploadedFiles.push(fileData);
+                localStorage.setItem('frediUploadedFiles', JSON.stringify(uploadedFiles));
+                
+                updateStorageUI();
+                displayUploadedFiles();
+                
+                showNotification(
+                    'Upload Successful', 
+                    `File "${file.name}" uploaded successfully!`,
+                    'success'
+                );
+                
+            } catch (error) {
+                showNotification(
+                    'Upload Failed', 
+                    `Failed to upload "${file.name}": ${error.message}`,
+                    'warning'
+                );
+            }
+        }
+
+        async function deleteFile(index) {
+            const file = uploadedFiles[index];
+            
+            try {
+                await deleteFromFirebase(file.storagePath);
+                uploadedFiles.splice(index, 1);
+                localStorage.setItem('frediUploadedFiles', JSON.stringify(uploadedFiles));
+                
+                updateStorageUI();
+                displayUploadedFiles();
+                
+                showNotification(
+                    'File Deleted', 
+                    `File "${file.name}" deleted successfully.`,
+                    'success'
+                );
+                
+            } catch (error) {
+                showNotification(
+                    'Delete Failed', 
+                    `Failed to delete "${file.name}": ${error.message}`,
+                    'warning'
+                );
+            }
+        }
+
+        function displayUploadedFiles() {
+            if (uploadedFiles.length === 0) {
+                uploadedFilesContainer.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: var(--gray);">
+                        <i class="fas fa-cloud" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
+                        No files uploaded yet. Click above to upload files to Firebase Storage.
+                    </div>
+                `;
+                return;
+            }
+
+            let filesHTML = '';
+            uploadedFiles.forEach((file, index) => {
+                const fileSize = (file.size / (1024 * 1024)).toFixed(2);
+                const fileIcon = getFileIcon(file.type);
+                
+                filesHTML += `
+                    <div class="file-item">
+                        <div class="file-info">
+                            <div class="file-icon">
+                                <i class="${fileIcon}"></i>
+                            </div>
+                            <div>
+                                <div style="font-weight: 600;">${file.name}</div>
+                                <div style="color: var(--gray); font-size: 0.9rem;">
+                                    ${fileSize} MB • ${new Date(file.uploadedAt).toLocaleDateString()}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="file-actions">
+                            <button class="file-action-btn" onclick="window.open('${file.url}', '_blank')" title="View File">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="file-action-btn" onclick="downloadFile('${file.url}', '${file.name}')" title="Download">
+                                <i class="fas fa-download"></i>
+                            </button>
+                            <button class="file-action-btn" onclick="deleteFile(${index})" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            uploadedFilesContainer.innerHTML = filesHTML;
+        }
+
+        function getFileIcon(fileType) {
+            if (fileType.startsWith('image/')) return 'fas fa-file-image';
+            if (fileType === 'application/pdf') return 'fas fa-file-pdf';
+            if (fileType.includes('word') || fileType.includes('document')) return 'fas fa-file-word';
+            return 'fas fa-file';
+        }
+
+        function downloadFile(url, filename) {
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        function updateStorageUI() {
+            const totalSize = uploadedFiles.reduce((sum, file) => sum + file.size, 0);
+            const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
+            const totalSizeGB = (totalSize / (1024 * 1024 * 1024)).toFixed(2);
+            const maxStorageGB = 5;
+            const storagePercent = (totalSizeGB / maxStorageGB) * 100;
+            
+            storageUsedElement.textContent = `${totalSizeMB} MB`;
+            storageCurrentElement.textContent = `${totalSizeMB} MB`;
+            storageTotalElement.textContent = `${maxStorageGB} GB`;
+            storageProgressElement.style.width = `${storagePercent}%`;
+            
+            if (totalSizeGB > maxStorageGB * 0.8) {
+                storageStatusElement.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Storage almost full';
+                storageStatusElement.style.color = 'var(--warning)';
+            } else if (totalSizeGB > 0) {
+                storageStatusElement.textContent = `${uploadedFiles.length} files uploaded`;
+                storageStatusElement.style.color = 'var(--success)';
+            } else {
+                storageStatusElement.textContent = 'Ready for file uploads';
+                storageStatusElement.style.color = 'var(--gray)';
+            }
+        }
         
         // Handle form submission
         registrationForm.addEventListener('submit', function(e) {
             e.preventDefault();
             
-            // Get form values
             const fullName = document.getElementById('fullName').value;
             const phoneNumber = document.getElementById('phoneNumber').value;
             const email = document.getElementById('email').value;
             const work = document.getElementById('work').value;
             const notes = document.getElementById('notes').value;
             
-            // Create new registration
             const newRegistration = {
                 id: Date.now(),
                 name: fullName,
@@ -788,69 +1082,38 @@
                 date: new Date().toISOString().split('T')[0]
             };
             
-            // Add to registrations array
             registrations.push(newRegistration);
             registrationCount++;
+            
+            // Save to localStorage
+            localStorage.setItem('frediRegistrations', JSON.stringify(registrations));
             
             // Update UI
             updateRegistrationUI();
             
-            // Show success notification
             showNotification(
                 'Registration Successful!', 
-                `Thank you ${fullName}! Your contact has been added to the VCF file.`,
+                `Thank you ${fullName}! Your contact has been registered.`,
                 'success'
             );
             
-            // Reset form
             registrationForm.reset();
             
-            // Check if we reached the limit
             if (registrationCount >= maxRegistrations) {
-                downloadSection.classList.remove('hidden');
-                downloadBtn.disabled = false;
-                
                 showNotification(
                     'Registration Limit Reached!', 
-                    'Maximum of 1000 registrations achieved. VCF file is now available for download.',
+                    'Maximum of 1000 registrations achieved.',
                     'success'
-                );
-            }
-            
-            // Notify about progress milestones
-            if (registrationCount === 1) {
-                showNotification(
-                    'First Registration!', 
-                    'You are the first person to register. Share with friends to grow the contact list.',
-                    'info'
-                );
-            }
-            
-            if (registrationCount === 500) {
-                showNotification(
-                    'Halfway There!', 
-                    'We have reached 500 registrations. Only 500 more slots available!',
-                    'info'
-                );
-            }
-            
-            if (registrationCount === 900) {
-                showNotification(
-                    'Almost Full!', 
-                    'Only 100 registration slots remaining. Share quickly before time runs out!',
-                    'warning'
                 );
             }
         });
         
         function updateRegistrationUI() {
-            // Update count and progress
             totalRegistrationsElement.textContent = registrationCount;
             const progressPercent = (registrationCount / maxRegistrations) * 100;
             registrationProgress.style.width = `${progressPercent}%`;
             remainingSlotsElement.textContent = maxRegistrations - registrationCount;
             
-            // Update table
             if (registrationCount === 0) {
                 registrationsBody.innerHTML = `
                     <tr>
@@ -862,7 +1125,6 @@
                 `;
             } else {
                 let tableHTML = '';
-                // Show latest 5 registrations
                 const recentRegistrations = [...registrations].reverse().slice(0, 5);
                 
                 recentRegistrations.forEach(reg => {
@@ -882,56 +1144,105 @@
                 
                 registrationsBody.innerHTML = tableHTML;
             }
-            
-            // Enable download button if we have at least one registration
-            if (registrationCount > 0) {
-                downloadBtn.disabled = false;
-            }
         }
         
         function shareToWhatsApp() {
-            const text = `Register for Fredi VCF! \n\nFree phone number registration for VCF file. \n\nJoin now: ${window.location.href} \n\nAlso join our WhatsApp channel: https://whatsapp.com/channel/0029VbAjdiWBFLgXpS7VJz1u`;
+            const text = `Register for Fredi VCF! \n\nFree contact registration for VCF file with Firebase Storage support. \n\nJoin now: ${window.location.href}`;
             const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
             window.open(url, '_blank');
             
             showNotification(
                 'Share on WhatsApp', 
-                'The registration link has been prepared for sharing on WhatsApp.',
+                'The registration link has been prepared for sharing.',
                 'info'
             );
         }
         
         function downloadVCF() {
-            // In a real implementation, this would generate and download a VCF file
-            // For demo purposes, we'll just show a notification
+            if (registrations.length === 0) {
+                showNotification(
+                    'No Data', 
+                    'There are no registrations to download.',
+                    'warning'
+                );
+                return;
+            }
+            
+            // Simple VCF generation
+            let vcfContent = '';
+            registrations.forEach(contact => {
+                vcfContent += `BEGIN:VCARD
+VERSION:3.0
+FN:${contact.name}
+TEL:${contact.phone}
+EMAIL:${contact.email}
+ORG:${contact.work}
+NOTE:${contact.notes}
+END:VCARD\n`;
+            });
+            
+            const blob = new Blob([vcfContent], { type: 'text/vcard' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `fredi-contacts-${new Date().toISOString().split('T')[0]}.vcf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
             
             showNotification(
-                'VCF Download Started', 
-                'Your VCF file is being prepared with all registered contacts.',
+                'VCF Downloaded', 
+                `${registrations.length} contacts exported to VCF file.`,
                 'success'
             );
-            
-            // Simulate download process
-            setTimeout(() => {
+        }
+
+        function clearAllData() {
+            if (confirm('Are you sure you want to clear all registration data and uploaded files? This action cannot be undone.')) {
+                registrations = [];
+                registrationCount = 0;
+                uploadedFiles = [];
+                
+                localStorage.removeItem('frediRegistrations');
+                localStorage.removeItem('frediUploadedFiles');
+                
+                updateRegistrationUI();
+                displayUploadedFiles();
+                updateStorageUI();
+                
                 showNotification(
-                    'Download Complete!', 
-                    'Your VCF file has been downloaded successfully. You can now import it to your contacts.',
+                    'Data Cleared', 
+                    'All registration data and uploaded files have been cleared.',
                     'success'
                 );
-            }, 2000);
+            }
         }
         
-        // Initialize with empty state
-        updateRegistrationUI();
-        
-        // Show welcome notification
-        setTimeout(() => {
-            showNotification(
-                'Welcome to Fredi VCF!', 
-                'Register your contact to be included in the VCF file. Share with friends!',
-                'info'
-            );
-        }, 1000);
+        // Initialize the application
+        function initApp() {
+            updateRegistrationUI();
+            displayUploadedFiles();
+            updateStorageUI();
+            
+            // Check if Firebase is loaded
+            if (!window.firebaseStorage) {
+                showNotification(
+                    'Firebase Not Loaded', 
+                    'Firebase Storage failed to initialize. File uploads will not work.',
+                    'warning'
+                );
+            } else {
+                showNotification(
+                    'App Ready', 
+                    'Fredi VCF with Firebase Storage is ready to use!',
+                    'success'
+                );
+            }
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', initApp);
     </script>
 </body>
 </html>
