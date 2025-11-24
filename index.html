@@ -1,1248 +1,263 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fredi VCF - Contact Registration</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Fredi VCF - Contact Sharing Platform</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    <!-- Firebase Storage Integration -->
-    <script type="module">
-        // Import Firebase modules
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-analytics.js";
-        import { 
-            getStorage, 
-            ref, 
-            uploadBytes, 
-            getDownloadURL,
-            listAll,
-            deleteObject 
-        } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-storage.js";
-
-        // Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyB2jwbNHZhnWJWszdnQ-Eiud8rS0hAF1PI",
-            authDomain: "fredi-ai.firebaseapp.com",
-            projectId: "fredi-ai",
-            storageBucket: "fredi-ai.firebasestorage.app",
-            messagingSenderId: "612087815858",
-            appId: "1:612087815858:web:07ebe516d46f65495af3ab",
-            measurementId: "G-DCP4DKN42Z"
-        };
-
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const analytics = getAnalytics(app);
-        const storage = getStorage(app);
-
-        // Make Firebase Storage available globally
-        window.firebaseStorage = storage;
-        window.firebaseStorageFunctions = {
-            uploadBytes,
-            getDownloadURL,
-            ref,
-            listAll,
-            deleteObject
-        };
-
-        console.log("Firebase Storage initialized successfully");
-    </script>
-
-    <style>
-        :root {
-            --primary: #4361ee;
-            --secondary: #3f37c9;
-            --success: #4cc9f0;
-            --warning: #f72585;
-            --light: #f8f9fa;
-            --dark: #212529;
-            --gray: #6c757d;
-            --card-bg: rgba(255, 255, 255, 0.95);
-            --shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        body {
-            background: linear-gradient(135deg, #1e3c72, #2a5298);
-            color: var(--dark);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px 0;
-            margin-bottom: 30px;
-            animation: fadeIn 1s ease;
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .logo i {
-            font-size: 2.5rem;
-            color: var(--success);
-        }
-
-        .logo h1 {
-            font-size: 2rem;
-            color: white;
-            font-weight: 700;
-        }
-
-        .status-badge {
-            background: var(--warning);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-weight: 600;
-            animation: pulse 2s infinite;
-        }
-
-        .registration-form {
-            background: var(--card-bg);
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: var(--shadow);
-            margin-bottom: 30px;
-            animation: slideUp 0.5s ease;
-        }
-
-        .form-title {
-            color: var(--primary);
-            margin-bottom: 20px;
-            text-align: center;
-            font-size: 1.5rem;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: var(--dark);
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 12px 15px;
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            font-size: 1rem;
-            transition: border-color 0.3s ease;
-        }
-
-        .form-control:focus {
-            border-color: var(--primary);
-            outline: none;
-        }
-
-        .form-row {
-            display: flex;
-            gap: 15px;
-        }
-
-        .form-row .form-group {
-            flex: 1;
-        }
-
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 25px;
-            margin-bottom: 30px;
-        }
-
-        .card {
-            background: var(--card-bg);
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: var(--shadow);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            animation: slideUp 0.5s ease;
-        }
-
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-        }
-
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .card-title {
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: var(--primary);
-        }
-
-        .card-icon {
-            width: 50px;
-            height: 50px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-        }
-
-        .bg-primary {
-            background: rgba(67, 97, 238, 0.2);
-            color: var(--primary);
-        }
-
-        .bg-success {
-            background: rgba(76, 201, 240, 0.2);
-            color: var(--success);
-        }
-
-        .bg-warning {
-            background: rgba(247, 37, 133, 0.2);
-            color: var(--warning);
-        }
-
-        .stat-number {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 10px;
-        }
-
-        .progress-container {
-            margin-top: 15px;
-        }
-
-        .progress-bar {
-            height: 10px;
-            background: #e9ecef;
-            border-radius: 5px;
-            overflow: hidden;
-        }
-
-        .progress {
-            height: 100%;
-            background: linear-gradient(to right, var(--primary), var(--success));
-            border-radius: 5px;
-            transition: width 1.5s ease;
-        }
-
-        .progress-text {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 5px;
-            font-size: 0.9rem;
-            color: var(--gray);
-        }
-
-        .countdown {
-            display: flex;
-            gap: 15px;
-            margin-top: 20px;
-        }
-
-        .countdown-item {
-            text-align: center;
-            flex: 1;
-        }
-
-        .countdown-value {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: var(--primary);
-            padding: 10px;
-            background: rgba(67, 97, 238, 0.1);
-            border-radius: 10px;
-        }
-
-        .countdown-label {
-            font-size: 0.8rem;
-            margin-top: 5px;
-            color: var(--gray);
-        }
-
-        .registrations-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-
-        .registrations-table th, 
-        .registrations-table td {
-            padding: 12px 15px;
-            text-align: left;
-            border-bottom: 1px solid #e9ecef;
-        }
-
-        .registrations-table th {
-            background: rgba(67, 97, 238, 0.1);
-            color: var(--primary);
-            font-weight: 600;
-        }
-
-        .registrations-table tr:hover {
-            background: rgba(67, 97, 238, 0.05);
-        }
-
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            object-fit: cover;
-            margin-right: 10px;
-            vertical-align: middle;
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 15px;
-            margin-top: 30px;
-        }
-
-        .btn {
-            padding: 12px 25px;
-            border-radius: 10px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border: none;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-        }
-
-        .btn-success {
-            background: var(--success);
-            color: white;
-        }
-
-        .btn-warning {
-            background: var(--warning);
-            color: white;
-        }
-
-        .btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .file-upload-section {
-            background: var(--card-bg);
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: var(--shadow);
-            margin-bottom: 30px;
-        }
-
-        .upload-area {
-            border: 2px dashed #ddd;
-            border-radius: 10px;
-            padding: 40px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-bottom: 20px;
-        }
-
-        .upload-area:hover {
-            border-color: var(--primary);
-            background: rgba(67, 97, 238, 0.05);
-        }
-
-        .upload-area i {
-            font-size: 3rem;
-            color: var(--gray);
-            margin-bottom: 15px;
-        }
-
-        .file-input {
-            display: none;
-        }
-
-        .uploaded-files {
-            margin-top: 20px;
-        }
-
-        .file-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px;
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            background: white;
-        }
-
-        .file-info {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .file-icon {
-            font-size: 1.5rem;
-            color: var(--primary);
-        }
-
-        .file-actions {
-            display: flex;
-            gap: 10px;
-        }
-
-        .file-action-btn {
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-size: 1.2rem;
-            color: var(--gray);
-            transition: color 0.3s ease;
-        }
-
-        .file-action-btn:hover {
-            color: var(--primary);
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        /* Notification Styles */
-        .notification-container {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1000;
-            max-width: 350px;
-        }
-
-        .notification {
-            background: white;
-            border-radius: 10px;
-            padding: 15px 20px;
-            margin-bottom: 15px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            transform: translateX(400px);
-            transition: transform 0.3s ease;
-            border-left: 4px solid var(--primary);
-        }
-
-        .notification.show {
-            transform: translateX(0);
-        }
-
-        .notification.success {
-            border-left-color: var(--success);
-        }
-
-        .notification.warning {
-            border-left-color: var(--warning);
-        }
-
-        .notification.info {
-            border-left-color: var(--primary);
-        }
-
-        .notification-icon {
-            font-size: 1.5rem;
-        }
-
-        .notification.success .notification-icon {
-            color: var(--success);
-        }
-
-        .notification.warning .notification-icon {
-            color: var(--warning);
-        }
-
-        .notification.info .notification-icon {
-            color: var(--primary);
-        }
-
-        .notification-content {
-            flex: 1;
-        }
-
-        .notification-title {
-            font-weight: 600;
-            margin-bottom: 5px;
-        }
-
-        .notification-message {
-            font-size: 0.9rem;
-            color: var(--gray);
-        }
-
-        .notification-close {
-            background: none;
-            border: none;
-            font-size: 1.2rem;
-            cursor: pointer;
-            color: var(--gray);
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @keyframes slideUp {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-
-        @media (max-width: 768px) {
-            .dashboard-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .countdown {
-                flex-wrap: wrap;
-            }
-            
-            .action-buttons {
-                flex-direction: column;
-            }
-            
-            .form-row {
-                flex-direction: column;
-                gap: 0;
-            }
-            
-            .notification-container {
-                left: 20px;
-                right: 20px;
-                max-width: none;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    <div class="notification-container" id="notificationContainer"></div>
-
-    <div class="container">
-        <header>
-            <div class="logo">
-                <i class="fas fa-address-book"></i>
-                <h1>Fredi VCF Dashboard</h1>
-            </div>
-            <div class="status-badge">
-                <i class="fas fa-cloud"></i> Firebase Storage Active
-            </div>
-        </header>
-
-        <div class="registration-form">
-            <h2 class="form-title">Contact Registration Form</h2>
-            <form id="registrationForm">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="fullName">Full Name</label>
-                        <input type="text" id="fullName" class="form-control" placeholder="Enter your full name" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="phoneNumber">Phone Number</label>
-                        <input type="tel" id="phoneNumber" class="form-control" placeholder="+255 XXX XXX XXX" required>
-                    </div>
-                </div>
-                
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="email">Email Address</label>
-                        <input type="email" id="email" class="form-control" placeholder="example@email.com" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="work">Occupation</label>
-                        <input type="text" id="work" class="form-control" placeholder="Your occupation" required>
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="notes">Additional Information</label>
-                    <textarea id="notes" class="form-control" rows="3" placeholder="Add any additional information..."></textarea>
-                </div>
-                
-                <button type="submit" class="btn btn-primary" style="width: 100%;">
-                    <i class="fas fa-user-plus"></i> Register Contact
-                </button>
-            </form>
-        </div>
-
-        <!-- File Upload Section -->
-        <div class="file-upload-section">
-            <h2 class="form-title">Upload Files to Firebase Storage</h2>
-            <div class="upload-area" id="uploadArea">
-                <i class="fas fa-cloud-upload-alt"></i>
-                <h3>Click to Upload Files</h3>
-                <p>Supported files: Images, PDF, Documents (Max: 10MB)</p>
-                <input type="file" id="fileInput" class="file-input" multiple>
-            </div>
-            <div class="uploaded-files" id="uploadedFiles">
-                <!-- Uploaded files will appear here -->
-            </div>
-        </div>
-
-        <div class="dashboard-grid">
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">Total Registrations</h2>
-                    <div class="card-icon bg-primary">
-                        <i class="fas fa-users"></i>
-                    </div>
-                </div>
-                <div class="stat-number" id="total-registrations">0</div>
-                <div class="progress-container">
-                    <div class="progress-bar">
-                        <div class="progress" id="registration-progress" style="width: 0%"></div>
-                    </div>
-                    <div class="progress-text">
-                        <span>0</span>
-                        <span>1000</span>
-                    </div>
-                </div>
-                <p style="margin-top: 15px; color: var(--gray);">
-                    <span id="remaining-slots">1000</span> slots remaining
-                </p>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">Registration Period</h2>
-                    <div class="card-icon bg-success">
-                        <i class="fas fa-clock"></i>
-                    </div>
-                </div>
-                <div class="stat-number">3 Days</div>
-                <div class="countdown">
-                    <div class="countdown-item">
-                        <div class="countdown-value" id="countdown-days">3</div>
-                        <div class="countdown-label">Days</div>
-                    </div>
-                    <div class="countdown-item">
-                        <div class="countdown-value" id="countdown-hours">0</div>
-                        <div class="countdown-label">Hours</div>
-                    </div>
-                    <div class="countdown-item">
-                        <div class="countdown-value" id="countdown-minutes">0</div>
-                        <div class="countdown-label">Minutes</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">Storage Status</h2>
-                    <div class="card-icon bg-warning">
-                        <i class="fas fa-database"></i>
-                    </div>
-                </div>
-                <div class="stat-number" id="storage-used">0 MB</div>
-                <div class="progress-container">
-                    <div class="progress-bar">
-                        <div class="progress" id="storage-progress" style="width: 0%"></div>
-                    </div>
-                    <div class="progress-text">
-                        <span id="storage-current">0 MB</span>
-                        <span id="storage-total">5 GB</span>
-                    </div>
-                </div>
-                <p style="margin-top: 15px; color: var(--gray);" id="storage-status">
-                    Ready for file uploads
-                </p>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-header">
-                <h2 class="card-title">Recent Registrations</h2>
-                <div class="card-icon bg-primary">
-                    <i class="fas fa-list"></i>
-                </div>
-            </div>
-            <div class="table-container">
-                <table class="registrations-table">
-                    <thead>
-                        <tr>
-                            <th>User</th>
-                            <th>Phone</th>
-                            <th>Email</th>
-                            <th>Occupation</th>
-                            <th>Registration Date</th>
-                        </tr>
-                    </thead>
-                    <tbody id="registrations-body">
-                        <tr>
-                            <td colspan="5" style="text-align: center; padding: 30px; color: var(--gray);">
-                                <i class="fas fa-users" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
-                                No registrations yet. Be the first to register!
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="action-buttons">
-            <button class="btn btn-primary" onclick="shareToWhatsApp()">
-                <i class="fab fa-whatsapp"></i> Share on WhatsApp
-            </button>
-            <button class="btn btn-success" id="download-btn" onclick="downloadVCF()">
-                <i class="fas fa-download"></i> Download VCF
-            </button>
-            <button class="btn btn-warning" onclick="clearAllData()">
-                <i class="fas fa-trash"></i> Clear Data
-            </button>
+    <!-- Animated Background -->
+    <div class="animated-bg">
+        <div class="bg-shapes">
+            <div class="shape shape-1"></div>
+            <div class="shape shape-2"></div>
+            <div class="shape shape-3"></div>
+            <div class="shape shape-4"></div>
         </div>
     </div>
 
-    <script>
-        // Data storage
-        let registrations = JSON.parse(localStorage.getItem('frediRegistrations')) || [];
-        let registrationCount = registrations.length;
-        const maxRegistrations = 1000;
-        let uploadedFiles = JSON.parse(localStorage.getItem('frediUploadedFiles')) || [];
-        
-        // DOM Elements
-        const registrationProgress = document.getElementById('registration-progress');
-        const totalRegistrationsElement = document.getElementById('total-registrations');
-        const remainingSlotsElement = document.getElementById('remaining-slots');
-        const downloadBtn = document.getElementById('download-btn');
-        const registrationsBody = document.getElementById('registrations-body');
-        const registrationForm = document.getElementById('registrationForm');
-        const notificationContainer = document.getElementById('notificationContainer');
-        const uploadArea = document.getElementById('uploadArea');
-        const fileInput = document.getElementById('fileInput');
-        const uploadedFilesContainer = document.getElementById('uploadedFiles');
-        const storageUsedElement = document.getElementById('storage-used');
-        const storageProgressElement = document.getElementById('storage-progress');
-        const storageCurrentElement = document.getElementById('storage-current');
-        const storageTotalElement = document.getElementById('storage-total');
-        const storageStatusElement = document.getElementById('storage-status');
-        
-        // Countdown timer
-        const countdownDays = document.getElementById('countdown-days');
-        const countdownHours = document.getElementById('countdown-hours');
-        const countdownMinutes = document.getElementById('countdown-minutes');
-        
-        // Set countdown to 3 days from now
-        const endTime = new Date();
-        endTime.setDate(endTime.getDate() + 3);
-        
-        // Firebase Storage Functions
-        async function uploadToFirebase(file) {
-            try {
-                if (!window.firebaseStorage) {
-                    throw new Error('Firebase Storage not initialized');
-                }
+    <!-- Notification Container -->
+    <div class="notification-container" id="notificationContainer"></div>
 
-                const { ref, uploadBytes, getDownloadURL } = window.firebaseStorageFunctions;
-                
-                // Create a reference to the file in Firebase Storage
-                const storageRef = ref(window.firebaseStorage, `fredi-files/${Date.now()}_${file.name}`);
-                
-                // Upload the file
-                const snapshot = await uploadBytes(storageRef, file);
-                
-                // Get the download URL
-                const downloadURL = await getDownloadURL(snapshot.ref);
-                
-                return {
-                    name: file.name,
-                    size: file.size,
-                    type: file.type,
-                    url: downloadURL,
-                    uploadedAt: new Date().toISOString(),
-                    storagePath: snapshot.ref.fullPath
-                };
-            } catch (error) {
-                console.error('Error uploading to Firebase:', error);
-                throw error;
-            }
-        }
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Processing your request...</p>
+        </div>
+    </div>
 
-        async function deleteFromFirebase(storagePath) {
-            try {
-                const { ref, deleteObject } = window.firebaseStorageFunctions;
-                const fileRef = ref(window.firebaseStorage, storagePath);
-                await deleteObject(fileRef);
-                return true;
-            } catch (error) {
-                console.error('Error deleting from Firebase:', error);
-                throw error;
-            }
-        }
-
-        // Notification system
-        function showNotification(title, message, type = 'info') {
-            const notification = document.createElement('div');
-            notification.className = `notification ${type}`;
-            notification.innerHTML = `
-                <div class="notification-icon">
-                    ${type === 'success' ? '<i class="fas fa-check-circle"></i>' : 
-                      type === 'warning' ? '<i class="fas fa-exclamation-triangle"></i>' : 
-                      '<i class="fas fa-info-circle"></i>'}
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-address-book"></i>
+                <div class="logo-text">
+                    <h1>Fredi VCF</h1>
+                    <span>Share Contacts Globally</span>
                 </div>
-                <div class="notification-content">
-                    <div class="notification-title">${title}</div>
-                    <div class="notification-message">${message}</div>
-                </div>
-                <button class="notification-close" onclick="this.parentElement.remove()">
-                    <i class="fas fa-times"></i>
-                </button>
-            `;
-            
-            notificationContainer.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.classList.add('show');
-            }, 100);
-            
-            setTimeout(() => {
-                if (notification.parentElement) {
-                    notification.classList.remove('show');
-                    setTimeout(() => {
-                        if (notification.parentElement) {
-                            notificationContainer.removeChild(notification);
-                        }
-                    }, 300);
-                }
-            }, 5000);
-        }
-        
-        function updateCountdown() {
-            const now = new Date();
-            const timeLeft = endTime - now;
-            
-            if (timeLeft <= 0) {
-                countdownDays.textContent = '0';
-                countdownHours.textContent = '0';
-                countdownMinutes.textContent = '0';
-                showNotification(
-                    'Registration Period Ended', 
-                    'The 3-day registration period has ended.',
-                    'warning'
-                );
-                return;
-            }
-            
-            const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-            
-            countdownDays.textContent = days;
-            countdownHours.textContent = hours;
-            countdownMinutes.textContent = minutes;
-        }
-        
-        // Update countdown every minute
-        setInterval(updateCountdown, 60000);
-        updateCountdown();
-        
-        // File upload handling
-        uploadArea.addEventListener('click', () => {
-            fileInput.click();
-        });
+            </div>
+            <div class="status-indicator">
+                <div class="status-dot"></div>
+                <span>Live Registration</span>
+            </div>
+        </header>
 
-        fileInput.addEventListener('change', async (e) => {
-            const files = e.target.files;
-            if (files.length === 0) return;
-
-            for (let file of files) {
-                await handleFileUpload(file);
-            }
-            
-            // Reset file input
-            fileInput.value = '';
-        });
-
-        async function handleFileUpload(file) {
-            // Validate file size (10MB max)
-            const maxSize = 10 * 1024 * 1024;
-            if (file.size > maxSize) {
-                showNotification(
-                    'File Too Large', 
-                    `File "${file.name}" exceeds 10MB limit.`,
-                    'warning'
-                );
-                return;
-            }
-
-            // Validate file type
-            const allowedTypes = [
-                'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-                'application/pdf', 
-                'application/msword',
-                'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-            ];
-            
-            if (!allowedTypes.includes(file.type)) {
-                showNotification(
-                    'Invalid File Type', 
-                    `File type not supported for "${file.name}".`,
-                    'warning'
-                );
-                return;
-            }
-
-            try {
-                showNotification(
-                    'Uploading File', 
-                    `Uploading "${file.name}" to Firebase Storage...`,
-                    'info'
-                );
-
-                const fileData = await uploadToFirebase(file);
-                uploadedFiles.push(fileData);
-                localStorage.setItem('frediUploadedFiles', JSON.stringify(uploadedFiles));
-                
-                updateStorageUI();
-                displayUploadedFiles();
-                
-                showNotification(
-                    'Upload Successful', 
-                    `File "${file.name}" uploaded successfully!`,
-                    'success'
-                );
-                
-            } catch (error) {
-                showNotification(
-                    'Upload Failed', 
-                    `Failed to upload "${file.name}": ${error.message}`,
-                    'warning'
-                );
-            }
-        }
-
-        async function deleteFile(index) {
-            const file = uploadedFiles[index];
-            
-            try {
-                await deleteFromFirebase(file.storagePath);
-                uploadedFiles.splice(index, 1);
-                localStorage.setItem('frediUploadedFiles', JSON.stringify(uploadedFiles));
-                
-                updateStorageUI();
-                displayUploadedFiles();
-                
-                showNotification(
-                    'File Deleted', 
-                    `File "${file.name}" deleted successfully.`,
-                    'success'
-                );
-                
-            } catch (error) {
-                showNotification(
-                    'Delete Failed', 
-                    `Failed to delete "${file.name}": ${error.message}`,
-                    'warning'
-                );
-            }
-        }
-
-        function displayUploadedFiles() {
-            if (uploadedFiles.length === 0) {
-                uploadedFilesContainer.innerHTML = `
-                    <div style="text-align: center; padding: 20px; color: var(--gray);">
-                        <i class="fas fa-cloud" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
-                        No files uploaded yet. Click above to upload files to Firebase Storage.
+        <!-- Main Dashboard -->
+        <main class="main-content">
+            <!-- Registration Section -->
+            <section id="registrationSection" class="registration-section">
+                <div class="registration-card glassmorphic">
+                    <div class="card-header">
+                        <h2>Register Your Contact</h2>
+                        <p>Join 1000+ contacts network</p>
                     </div>
-                `;
-                return;
-            }
 
-            let filesHTML = '';
-            uploadedFiles.forEach((file, index) => {
-                const fileSize = (file.size / (1024 * 1024)).toFixed(2);
-                const fileIcon = getFileIcon(file.type);
-                
-                filesHTML += `
-                    <div class="file-item">
-                        <div class="file-info">
-                            <div class="file-icon">
-                                <i class="${fileIcon}"></i>
-                            </div>
-                            <div>
-                                <div style="font-weight: 600;">${file.name}</div>
-                                <div style="color: var(--gray); font-size: 0.9rem;">
-                                    ${fileSize} MB • ${new Date(file.uploadedAt).toLocaleDateString()}
+                    <form id="registrationForm" class="registration-form">
+                        <!-- Profile Picture Upload -->
+                        <div class="profile-upload-section">
+                            <div class="profile-preview" id="profilePreview">
+                                <i class="fas fa-user"></i>
+                                <img id="profileImage" class="hidden" alt="Profile Preview">
+                                <div class="upload-overlay">
+                                    <i class="fas fa-camera"></i>
                                 </div>
                             </div>
+                            <input type="file" id="profileInput" accept="image/*" class="hidden">
+                            <button type="button" class="btn-upload" onclick="document.getElementById('profileInput').click()">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                Upload Profile Picture
+                            </button>
                         </div>
-                        <div class="file-actions">
-                            <button class="file-action-btn" onclick="window.open('${file.url}', '_blank')" title="View File">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="file-action-btn" onclick="downloadFile('${file.url}', '${file.name}')" title="Download">
-                                <i class="fas fa-download"></i>
-                            </button>
-                            <button class="file-action-btn" onclick="deleteFile(${index})" title="Delete">
-                                <i class="fas fa-trash"></i>
-                            </button>
+
+                        <!-- Form Fields -->
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="fullName">
+                                    <i class="fas fa-user"></i>
+                                    Full Name
+                                </label>
+                                <input type="text" id="fullName" placeholder="Enter your full name" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="phoneNumber">
+                                    <i class="fas fa-phone"></i>
+                                    Phone Number
+                                </label>
+                                <input type="tel" id="phoneNumber" placeholder="+255 XXX XXX XXX" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="email">
+                                    <i class="fas fa-envelope"></i>
+                                    Email Address
+                                </label>
+                                <input type="email" id="email" placeholder="your@email.com" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="occupation">
+                                    <i class="fas fa-briefcase"></i>
+                                    Occupation
+                                </label>
+                                <input type="text" id="occupation" placeholder="Your profession" required>
+                            </div>
+
+                            <div class="form-group full-width">
+                                <label for="additionalInfo">
+                                    <i class="fas fa-info-circle"></i>
+                                    Additional Information
+                                </label>
+                                <textarea id="additionalInfo" placeholder="Any additional details about yourself..." rows="3"></textarea>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-submit">
+                            <i class="fas fa-user-plus"></i>
+                            Register Contact
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Stats Dashboard -->
+            <section class="stats-section">
+                <div class="stats-grid">
+                    <div class="stat-card glassmorphic">
+                        <div class="stat-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="currentRegistrations">0</h3>
+                            <p>Current Registrations</p>
+                        </div>
+                        <div class="stat-progress">
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="currentProgress"></div>
+                            </div>
+                            <span id="currentPercent">0%</span>
                         </div>
                     </div>
-                `;
-            });
-            
-            uploadedFilesContainer.innerHTML = filesHTML;
-        }
 
-        function getFileIcon(fileType) {
-            if (fileType.startsWith('image/')) return 'fas fa-file-image';
-            if (fileType === 'application/pdf') return 'fas fa-file-pdf';
-            if (fileType.includes('word') || fileType.includes('document')) return 'fas fa-file-word';
-            return 'fas fa-file';
-        }
+                    <div class="stat-card glassmorphic">
+                        <div class="stat-icon">
+                            <i class="fas fa-bullseye"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="targetRegistrations">1000</h3>
+                            <p>Target Contacts</p>
+                        </div>
+                    </div>
 
-        function downloadFile(url, filename) {
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        }
+                    <div class="stat-card glassmorphic">
+                        <div class="stat-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="remainingSlots">1000</h3>
+                            <p>Remaining Slots</p>
+                        </div>
+                        <div class="stat-progress">
+                            <div class="progress-bar">
+                                <div class="progress-fill remaining" id="remainingProgress"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
-        function updateStorageUI() {
-            const totalSize = uploadedFiles.reduce((sum, file) => sum + file.size, 0);
-            const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
-            const totalSizeGB = (totalSize / (1024 * 1024 * 1024)).toFixed(2);
-            const maxStorageGB = 5;
-            const storagePercent = (totalSizeGB / maxStorageGB) * 100;
-            
-            storageUsedElement.textContent = `${totalSizeMB} MB`;
-            storageCurrentElement.textContent = `${totalSizeMB} MB`;
-            storageTotalElement.textContent = `${maxStorageGB} GB`;
-            storageProgressElement.style.width = `${storagePercent}%`;
-            
-            if (totalSizeGB > maxStorageGB * 0.8) {
-                storageStatusElement.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Storage almost full';
-                storageStatusElement.style.color = 'var(--warning)';
-            } else if (totalSizeGB > 0) {
-                storageStatusElement.textContent = `${uploadedFiles.length} files uploaded`;
-                storageStatusElement.style.color = 'var(--success)';
-            } else {
-                storageStatusElement.textContent = 'Ready for file uploads';
-                storageStatusElement.style.color = 'var(--gray)';
-            }
-        }
-        
-        // Handle form submission
-        registrationForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const fullName = document.getElementById('fullName').value;
-            const phoneNumber = document.getElementById('phoneNumber').value;
-            const email = document.getElementById('email').value;
-            const work = document.getElementById('work').value;
-            const notes = document.getElementById('notes').value;
-            
-            const newRegistration = {
-                id: Date.now(),
-                name: fullName,
-                phone: phoneNumber,
-                email: email,
-                work: work,
-                notes: notes,
-                date: new Date().toISOString().split('T')[0]
-            };
-            
-            registrations.push(newRegistration);
-            registrationCount++;
-            
-            // Save to localStorage
-            localStorage.setItem('frediRegistrations', JSON.stringify(registrations));
-            
-            // Update UI
-            updateRegistrationUI();
-            
-            showNotification(
-                'Registration Successful!', 
-                `Thank you ${fullName}! Your contact has been registered.`,
-                'success'
-            );
-            
-            registrationForm.reset();
-            
-            if (registrationCount >= maxRegistrations) {
-                showNotification(
-                    'Registration Limit Reached!', 
-                    'Maximum of 1000 registrations achieved.',
-                    'success'
-                );
-            }
-        });
-        
-        function updateRegistrationUI() {
-            totalRegistrationsElement.textContent = registrationCount;
-            const progressPercent = (registrationCount / maxRegistrations) * 100;
-            registrationProgress.style.width = `${progressPercent}%`;
-            remainingSlotsElement.textContent = maxRegistrations - registrationCount;
-            
-            if (registrationCount === 0) {
-                registrationsBody.innerHTML = `
-                    <tr>
-                        <td colspan="5" style="text-align: center; padding: 30px; color: var(--gray);">
-                            <i class="fas fa-users" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
-                            No registrations yet. Be the first to register!
-                        </td>
-                    </tr>
-                `;
-            } else {
-                let tableHTML = '';
-                const recentRegistrations = [...registrations].reverse().slice(0, 5);
-                
-                recentRegistrations.forEach(reg => {
-                    tableHTML += `
-                        <tr>
-                            <td>
-                                <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(reg.name)}&background=random" class="user-avatar" alt="User">
-                                ${reg.name}
-                            </td>
-                            <td>${reg.phone}</td>
-                            <td>${reg.email}</td>
-                            <td>${reg.work}</td>
-                            <td>${reg.date}</td>
-                        </tr>
-                    `;
-                });
-                
-                registrationsBody.innerHTML = tableHTML;
-            }
-        }
-        
-        function shareToWhatsApp() {
-            const text = `Register for Fredi VCF! \n\nFree contact registration for VCF file with Firebase Storage support. \n\nJoin now: ${window.location.href}`;
-            const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
-            window.open(url, '_blank');
-            
-            showNotification(
-                'Share on WhatsApp', 
-                'The registration link has been prepared for sharing.',
-                'info'
-            );
-        }
-        
-        function downloadVCF() {
-            if (registrations.length === 0) {
-                showNotification(
-                    'No Data', 
-                    'There are no registrations to download.',
-                    'warning'
-                );
-                return;
-            }
-            
-            // Simple VCF generation
-            let vcfContent = '';
-            registrations.forEach(contact => {
-                vcfContent += `BEGIN:VCARD
-VERSION:3.0
-FN:${contact.name}
-TEL:${contact.phone}
-EMAIL:${contact.email}
-ORG:${contact.work}
-NOTE:${contact.notes}
-END:VCARD\n`;
-            });
-            
-            const blob = new Blob([vcfContent], { type: 'text/vcard' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `fredi-contacts-${new Date().toISOString().split('T')[0]}.vcf`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            
-            showNotification(
-                'VCF Downloaded', 
-                `${registrations.length} contacts exported to VCF file.`,
-                'success'
-            );
-        }
+            <!-- Download Section (Hidden Initially) -->
+            <section id="downloadSection" class="download-section hidden">
+                <div class="download-card glassmorphic success">
+                    <div class="download-header">
+                        <i class="fas fa-check-circle"></i>
+                        <h2>VCF File Ready!</h2>
+                    </div>
+                    <p class="download-message">
+                        Congratulations! We've reached 1000 registrations. The VCF file containing all contacts is now available for download.
+                    </p>
+                    <button class="btn-download" onclick="downloadVCF()">
+                        <i class="fas fa-download"></i>
+                        Download VCF File
+                    </button>
+                    <p class="download-note">
+                        <i class="fas fa-info-circle"></i>
+                        This file contains all 1000 registered contacts in VCF format
+                    </p>
+                </div>
+            </section>
 
-        function clearAllData() {
-            if (confirm('Are you sure you want to clear all registration data and uploaded files? This action cannot be undone.')) {
-                registrations = [];
-                registrationCount = 0;
-                uploadedFiles = [];
-                
-                localStorage.removeItem('frediRegistrations');
-                localStorage.removeItem('frediUploadedFiles');
-                
-                updateRegistrationUI();
-                displayUploadedFiles();
-                updateStorageUI();
-                
-                showNotification(
-                    'Data Cleared', 
-                    'All registration data and uploaded files have been cleared.',
-                    'success'
-                );
-            }
-        }
-        
-        // Initialize the application
-        function initApp() {
-            updateRegistrationUI();
-            displayUploadedFiles();
-            updateStorageUI();
-            
-            // Check if Firebase is loaded
-            if (!window.firebaseStorage) {
-                showNotification(
-                    'Firebase Not Loaded', 
-                    'Firebase Storage failed to initialize. File uploads will not work.',
-                    'warning'
-                );
-            } else {
-                showNotification(
-                    'App Ready', 
-                    'Fredi VCF with Firebase Storage is ready to use!',
-                    'success'
-                );
-            }
-        }
+            <!-- Action Buttons -->
+            <section class="action-section">
+                <div class="action-grid">
+                    <button class="action-btn share-btn" onclick="shareToWhatsApp()">
+                        <i class="fab fa-whatsapp"></i>
+                        Share with WhatsApp Groups
+                    </button>
+                    
+                    <a href="https://whatsapp.com/channel/0029VbAjdiWBFLgXpS7VJz1u" class="action-btn channel-btn" target="_blank">
+                        <i class="fab fa-whatsapp"></i>
+                        Follow WhatsApp Channel
+                    </a>
 
-        // Initialize when page loads
-        window.addEventListener('load', initApp);
-    </script>
+                    <button class="action-btn info-btn" onclick="showChannelInfo()">
+                        <i class="fas fa-info-circle"></i>
+                        Channel Updates Info
+                    </button>
+                </div>
+            </section>
+
+            <!-- Recent Registrations -->
+            <section class="registrations-section">
+                <div class="registrations-card glassmorphic">
+                    <div class="card-header">
+                        <h3>Recent Registrations</h3>
+                        <span class="badge" id="totalCount">0</span>
+                    </div>
+                    <div class="registrations-list" id="registrationsList">
+                        <!-- Dynamic content will be added here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Channel Information -->
+            <section class="info-section">
+                <div class="info-card glassmorphic">
+                    <div class="info-header">
+                        <i class="fab fa-whatsapp"></i>
+                        <h3>Important Information</h3>
+                    </div>
+                    <div class="info-content">
+                        <div class="info-item">
+                            <i class="fas fa-bell"></i>
+                            <div>
+                                <strong>All VCF Updates on WhatsApp Channel</strong>
+                                <p>Follow our channel to get the VCF file and future updates</p>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-share-alt"></i>
+                            <div>
+                                <strong>Share with Friends</strong>
+                                <p>Invite others to register and help reach 1000 contacts faster</p>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-download"></i>
+                            <div>
+                                <strong>Automatic Download</strong>
+                                <p>Download button will appear automatically when we reach 1000 registrations</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
 </body>
 </html>
