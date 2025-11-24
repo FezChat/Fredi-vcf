@@ -9,17 +9,27 @@ const firebaseConfig = {
     measurementId: "G-DCP4DKN42Z"
 };
 
-// Initialize Firebase (you'll need to add Firebase SDK in HTML)
-// For now, we'll use localStorage for demo purposes
+// Initialize Firebase
+let db;
+let storage;
+try {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    storage = firebase.storage();
+    console.log("Firebase initialized successfully");
+} catch (error) {
+    console.error("Firebase initialization error:", error);
+}
 
 // App State
 const state = {
-    registrations: JSON.parse(localStorage.getItem('frediRegistrations')) || [],
+    registrations: [],
     maxRegistrations: 1000,
-    userProfile: JSON.parse(localStorage.getItem('frediUserProfile')) || null
+    userProfile: null,
+    isOnline: false
 };
 
-// DOM Elements
+// DOM Elements (same as before)
 const elements = {
     registrationForm: document.getElementById('registrationForm'),
     registrationSection: document.getElementById('registrationSection'),
@@ -40,40 +50,177 @@ const elements = {
 };
 
 // Initialize App
-function initApp() {
-    loadRegistrations();
-    setupEventListeners();
-    updateUI();
-    showNotification('Welcome to Fredi VCF!', 'Register your contact to join our global network.', 'info');
+async function initApp() {
+    showLoading(true);
+    
+    try {
+        // Check Firebase connection
+        await checkFirebaseConnection();
+        
+        // Load registrations from Firestore
+        await loadRegistrationsFromFirestore();
+        
+        // Setup real-time listener
+        setupRealtimeListener();
+        
+        setupEventListeners();
+        updateUI();
+        
+        showNotification('System Ready!', 'Fredi VCF is connected and ready.', 'success');
+        
+    } catch (error) {
+        console.error('App initialization failed:', error);
+        showNotification('Connection Issue', 'Using offline mode. Data may not sync across devices.', 'warning');
+        loadLocalRegistrations();
+    } finally {
+        showLoading(false);
+    }
 }
 
-// Event Listeners
-function setupEventListeners() {
-    // Form submission
-    elements.registrationForm.addEventListener('submit', handleFormSubmit);
-    
-    // Profile picture upload
-    elements.profileInput.addEventListener('change', handleProfileUpload);
-    
-    // Drag and drop for profile picture
-    elements.profilePreview.addEventListener('dragover', handleDragOver);
-    elements.profilePreview.addEventListener('drop', handleFileDrop);
+// Check Firebase Connection
+async function checkFirebaseConnection() {
+    return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+            reject(new Error('Firebase connection timeout'));
+        }, 5000);
+
+        db.collection('test').doc('connection').get()
+            .then(() => {
+                clearTimeout(timeout);
+                state.isOnline = true;
+                resolve();
+            })
+            .catch(error => {
+                clearTimeout(timeout);
+                reject(error);
+            });
+    });
 }
 
-// Form Submission
+// Load Registrations from Firestore
+async function loadRegistrationsFromFirestore() {
+    try {
+        const snapshot = await db.collection('registrations')
+            .orderBy('registrationDate', 'desc')
+            .limit(1000)
+            .get();
+        
+        state.registrations = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+        
+        console.log(`Loaded ${state.registrations.length} registrations from Firestore`);
+        
+    } catch (error) {
+        console.error('Error loading from Firestore:', error);
+        throw error;
+    }
+}
+
+// Setup Real-time Listener
+function setupRealtimeListener() {
+    db.collection('registrations')
+        .orderBy('registrationDate', 'desc')
+        .limit(1000)
+        .onSnapshot(snapshot => {
+            state.registrations = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            
+            updateUI();
+            
+            // Show notification for new registrations (except on initial load)
+            if (state.registrations.length > 0) {
+                const latestRegistration = state.registrations[0];
+                if (Date.now() - new Date(latestRegistration.registrationDate).getTime() < 10000) {
+                    showNotification('New Registration', `${latestRegistration.fullName} just joined!`, 'info');
+                }
+            }
+        }, error => {
+            console.error('Real-time listener error:', error);
+            showNotification('Sync Issue', 'Real-time updates paused.', 'warning');
+        });
+}
+
+// Save Registration to Firestore
+async function saveRegistrationToFirestore(userData) {
+    try {
+        // Check for duplicates in Firestore
+        const duplicatePhone = await db.collection('registrations')
+            .where('phoneNumber', '==', userData.phoneNumber)
+            .get();
+            
+        const duplicateEmail = await db.collection('registrations')
+            .where('email', '==', userData.email)
+            .get();
+        
+        if (!duplicatePhone.empty) {
+            throw new Error('Phone number already registered');
+        }
+        
+        if (!duplicateEmail.empty) {
+            throw new Error('Email already registered');
+        }
+        
+        // Upload profile picture if exists
+        if (state.userProfile && state.userProfile.imageUrl) {
+            const imageUrl = await uploadProfilePicture(state.userProfile.imageUrl, userData.id);
+            userData.profilePicture = imageUrl;
+        }
+        
+        // Save to Firestore
+        const docRef = await db.collection('registrations').add({
+            ...userData,
+            registrationDate: firebase.firestore.FieldValue.serverTimestamp(),
+            device: getDeviceInfo(),
+            ipAddress: await getIPAddress()
+        });
+        
+        userData.id = docRef.id;
+        return userData;
+        
+    } catch (error) {
+        console.error('Error saving to Firestore:', error);
+        throw error;
+    }
+}
+
+// Upload Profile Picture to Firebase Storage
+async function uploadProfilePicture(dataUrl, userId) {
+    try {
+        // Convert data URL to blob
+        const response = await fetch(dataUrl);
+        const blob = await response.blob();
+        
+        // Upload to Firebase Storage
+        const storageRef = storage.ref();
+        const profileRef = storageRef.child(`profiles/${userId}-${Date.now()}.jpg`);
+        
+        const snapshot = await profileRef.put(blob);
+        const downloadURL = await snapshot.ref.getDownloadURL();
+        
+        return downloadURL;
+        
+    } catch (error) {
+        console.error('Error uploading profile picture:', error);
+        throw error;
+    }
+}
+
+// Updated Form Submission with Firestore
 async function handleFormSubmit(e) {
     e.preventDefault();
     
     const formData = new FormData(elements.registrationForm);
     const userData = {
-        id: Date.now(),
-        fullName: document.getElementById('fullName').value,
-        phoneNumber: document.getElementById('phoneNumber').value,
-        email: document.getElementById('email').value,
-        occupation: document.getElementById('occupation').value,
-        additionalInfo: document.getElementById('additionalInfo').value,
-        profilePicture: state.userProfile?.imageUrl || null,
-        registrationDate: new Date().toISOString(),
+        fullName: document.getElementById('fullName').value.trim(),
+        phoneNumber: document.getElementById('phoneNumber').value.trim(),
+        email: document.getElementById('email').value.trim().toLowerCase(),
+        occupation: document.getElementById('occupation').value.trim(),
+        additionalInfo: document.getElementById('additionalInfo').value.trim(),
+        profilePicture: null,
         status: 'active'
     };
 
@@ -85,221 +232,72 @@ async function handleFormSubmit(e) {
     showLoading(true);
 
     try {
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Save to Firestore
+        const savedUser = await saveRegistrationToFirestore(userData);
         
-        // Check if user already registered
-        const existingUser = state.registrations.find(reg => 
-            reg.phoneNumber === userData.phoneNumber || reg.email === userData.email
+        // Also save locally as backup
+        saveRegistrationLocally(savedUser);
+        
+        showNotification(
+            'Registration Successful!', 
+            `Welcome ${userData.fullName}! You're contact #${state.registrations.length + 1}`, 
+            'success'
         );
-
-        if (existingUser) {
-            showNotification('Already Registered', 'This phone number or email is already registered.', 'warning');
-            showLoading(false);
-            return;
-        }
-
-        // Add to registrations
-        state.registrations.push(userData);
-        saveRegistrations();
-        
-        showNotification('Registration Successful!', `Welcome ${userData.fullName}! You're now part of our network.`, 'success');
         
         // Reset form
         elements.registrationForm.reset();
         resetProfilePicture();
         
-        // Update UI
-        updateUI();
-        
-        // Check if we reached the limit
-        if (state.registrations.length >= state.maxRegistrations) {
-            showDownloadSection();
-        }
+        // No need to call updateUI() - real-time listener will handle it
         
     } catch (error) {
-        showNotification('Registration Failed', 'Please try again later.', 'warning');
         console.error('Registration error:', error);
+        
+        if (error.message.includes('already registered')) {
+            showNotification('Already Registered', error.message, 'warning');
+        } else {
+            showNotification('Registration Failed', 'Please check your connection and try again.', 'warning');
+        }
     } finally {
         showLoading(false);
     }
 }
 
-// Profile Picture Handling
-function handleProfileUpload(e) {
-    const file = e.target.files[0];
-    if (file) {
-        processImageFile(file);
-    }
+// Backup: Local Storage Functions
+function saveRegistrationLocally(userData) {
+    let localRegistrations = JSON.parse(localStorage.getItem('frediRegistrations')) || [];
+    localRegistrations.push(userData);
+    localStorage.setItem('frediRegistrations', JSON.stringify(localRegistrations));
 }
 
-function handleDragOver(e) {
-    e.preventDefault();
-    e.currentTarget.style.borderColor = '#4361ee';
-}
-
-function handleFileDrop(e) {
-    e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) {
-        processImageFile(file);
-    }
-}
-
-function processImageFile(file) {
-    if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        showNotification('File Too Large', 'Please select an image smaller than 5MB.', 'warning');
-        return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        elements.profileImage.src = e.target.result;
-        elements.profileImage.classList.remove('hidden');
-        elements.profilePreview.querySelector('i').classList.add('hidden');
-        
-        // Store profile data
-        state.userProfile = {
-            imageUrl: e.target.result,
-            fileName: file.name,
-            fileSize: file.size
-        };
-        localStorage.setItem('frediUserProfile', JSON.stringify(state.userProfile));
-    };
-    reader.readAsDataURL(file);
-}
-
-function resetProfilePicture() {
-    elements.profileImage.classList.add('hidden');
-    elements.profilePreview.querySelector('i').classList.remove('hidden');
-    state.userProfile = null;
-    localStorage.removeItem('frediUserProfile');
-}
-
-// Form Validation
-function validateForm(data) {
-    if (!data.fullName.trim()) {
-        showNotification('Validation Error', 'Please enter your full name.', 'warning');
-        return false;
-    }
-
-    if (!data.phoneNumber.trim() || !isValidPhoneNumber(data.phoneNumber)) {
-        showNotification('Validation Error', 'Please enter a valid phone number.', 'warning');
-        return false;
-    }
-
-    if (!data.email.trim() || !isValidEmail(data.email)) {
-        showNotification('Validation Error', 'Please enter a valid email address.', 'warning');
-        return false;
-    }
-
-    if (!data.occupation.trim()) {
-        showNotification('Validation Error', 'Please enter your occupation.', 'warning');
-        return false;
-    }
-
-    return true;
-}
-
-function isValidPhoneNumber(phone) {
-    const phoneRegex = /^\+?[\d\s\-\(\)]{10,}$/;
-    return phoneRegex.test(phone);
-}
-
-function isValidEmail(email) {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-}
-
-// UI Updates
-function updateUI() {
-    const currentCount = state.registrations.length;
-    const remainingCount = state.maxRegistrations - currentCount;
-    const progressPercent = (currentCount / state.maxRegistrations) * 100;
-    const remainingPercent = (remainingCount / state.maxRegistrations) * 100;
-
-    // Update stats
-    elements.currentRegistrations.textContent = currentCount;
-    elements.remainingSlots.textContent = remainingCount;
-    elements.currentPercent.textContent = `${Math.round(progressPercent)}%`;
-    
-    // Update progress bars
-    elements.currentProgress.style.width = `${progressPercent}%`;
-    elements.remainingProgress.style.width = `${remainingPercent}%`;
-    
-    // Update total count badge
-    elements.totalCount.textContent = currentCount;
-    
-    // Update registrations list
-    updateRegistrationsList();
-    
-    // Show download section if limit reached
-    if (currentCount >= state.maxRegistrations) {
-        showDownloadSection();
-    }
-}
-
-function updateRegistrationsList() {
-    const recentRegistrations = [...state.registrations]
-        .reverse()
-        .slice(0, 5);
-
-    if (recentRegistrations.length === 0) {
-        elements.registrationsList.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-users"></i>
-                <p>No registrations yet. Be the first to register!</p>
-            </div>
-        `;
-        return;
-    }
-
-    elements.registrationsList.innerHTML = recentRegistrations.map(registration => `
-        <div class="registration-item">
-            <div class="registration-avatar">
-                ${registration.profilePicture 
-                    ? `<img src="${registration.profilePicture}" alt="${registration.fullName}">`
-                    : `<span>${getInitials(registration.fullName)}</span>`
-                }
-            </div>
-            <div class="registration-info">
-                <h4>${registration.fullName}</h4>
-                <p>${registration.occupation} • ${formatDate(registration.registrationDate)}</p>
-            </div>
-        </div>
-    `).join('');
-}
-
-function showDownloadSection() {
-    elements.registrationSection.classList.add('hidden');
-    elements.downloadSection.classList.remove('hidden');
-    showNotification('Target Reached!', 'VCF file is now available for download.', 'success');
+function loadLocalRegistrations() {
+    const localRegistrations = JSON.parse(localStorage.getItem('frediRegistrations')) || [];
+    state.registrations = localRegistrations;
+    updateUI();
 }
 
 // Utility Functions
-function getInitials(name) {
-    return name.split(' ').map(word => word[0]).join('').toUpperCase().substring(0, 2);
+function getDeviceInfo() {
+    return {
+        userAgent: navigator.userAgent,
+        platform: navigator.platform,
+        language: navigator.language,
+        screen: `${screen.width}x${screen.height}`
+    };
 }
 
-function formatDate(dateString) {
-    return new Date(dateString).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric'
-    });
+async function getIPAddress() {
+    try {
+        const response = await fetch('https://api.ipify.org?format=json');
+        const data = await response.json();
+        return data.ip;
+    } catch (error) {
+        return 'unknown';
+    }
 }
 
-// Data Management
-function loadRegistrations() {
-    // In a real app, this would load from Firebase
-    console.log('Loaded registrations:', state.registrations.length);
-}
-
-function saveRegistrations() {
-    localStorage.setItem('frediRegistrations', JSON.stringify(state.registrations));
-}
-
-// Download VCF
-function downloadVCF() {
+// Download VCF from Firestore Data
+async function downloadVCF() {
     if (state.registrations.length === 0) {
         showNotification('No Data', 'There are no contacts to download.', 'warning');
         return;
@@ -318,6 +316,8 @@ TEL:${contact.phoneNumber}
 EMAIL:${contact.email}
 ORG:${contact.occupation}
 NOTE:${contact.additionalInfo || 'Registered via Fredi VCF'}
+URL:${window.location.href}
+REV:${contact.registrationDate}
 END:VCARD\n`;
         });
 
@@ -332,13 +332,45 @@ END:VCARD\n`;
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        showNotification('Download Complete!', `${state.registrations.length} contacts exported successfully.`, 'success');
+        showNotification(
+            'Download Complete!', 
+            `${state.registrations.length} contacts exported successfully.`, 
+            'success'
+        );
+        
+        // Log download event
+        await db.collection('downloads').add({
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            count: state.registrations.length,
+            userAgent: navigator.userAgent
+        });
         
     } catch (error) {
         showNotification('Download Failed', 'Please try again later.', 'warning');
         console.error('Download error:', error);
     } finally {
         showLoading(false);
+    }
+}
+
+// Admin Functions (Optional - for monitoring)
+async function getStats() {
+    try {
+        const totalRegistrations = state.registrations.length;
+        const uniqueDevices = [...new Set(state.registrations.map(r => r.device?.userAgent))].length;
+        
+        console.log('📊 Statistics:');
+        console.log(`Total Registrations: ${totalRegistrations}`);
+        console.log(`Unique Devices: ${uniqueDevices}`);
+        console.log(`Completion: ${((totalRegistrations / state.maxRegistrations) * 100).toFixed(1)}%`);
+        
+        return {
+            totalRegistrations,
+            uniqueDevices,
+            completionPercent: (totalRegistrations / state.maxRegistrations) * 100
+        };
+    } catch (error) {
+        console.error('Error getting stats:', error);
     }
 }
 
