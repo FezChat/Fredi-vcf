@@ -3,266 +3,100 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Fredi VCF - Contact Sharing Platform</title>
+    <title>Fredi VCF</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css" />
     
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 </head>
 <body>
-    <!-- Animated Background -->
-    <div class="animated-bg">
-        <div class="bg-shapes">
-            <div class="shape shape-1"></div>
-            <div class="shape shape-2"></div>
-            <div class="shape shape-3"></div>
-            <div class="shape shape-4"></div>
-        </div>
-    </div>
-
-    <!-- Notification Container -->
-    <div class="notification-container" id="notificationContainer"></div>
-
-    <!-- Loading Overlay -->
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="loading-spinner">
-            <div class="spinner"></div>
-            <p>Processing your request...</p>
-        </div>
-    </div>
-
+    <div class="background"></div>
+    
     <div class="container">
-        <!-- Header -->
-        <header class="header">
-            <div class="logo">
-                <i class="fas fa-address-book"></i>
-                <div class="logo-text">
-                    <h1>Fredi VCF</h1>
-                    <span>Share Contacts Globally</span>
-                </div>
+        <h1 class="title">Fredi VCF</h1>
+        <p class="subtitle">Create & Share Global Contacts Instantly</p>
+        
+        <div class="form-card">
+            <label>Full Name</label>
+            <input id="name" type="text" placeholder="Your full name">
+            
+            <label>Phone Number</label>
+            <input id="phone" type="text" placeholder="+255700000000">
+            
+            <label>Email</label>
+            <input id="email" type="email" placeholder="your@email.com">
+            
+            <button id="submitBtn" onclick="registerUser()">
+                <i class="fas fa-user-plus"></i>
+                Submit Details to VCF
+            </button>
+            
+            <div id="loading" class="loading hidden">
+                <div class="spinner"></div>
+                <span>Registering...</span>
             </div>
-            <div class="status-indicator">
-                <div class="status-dot"></div>
-                <span>Live Registration</span>
+            
+            <p id="success" class="success hidden">
+                <i class="fas fa-check-circle"></i>
+                Contact submitted successfully!
+            </p>
+        </div>
+
+        <div class="stats">
+            <div class="stat" style="--color:#1e90ff;">
+                <span id="current">0</span>
+                <p>Current</p>
             </div>
-        </header>
+            <div class="stat" style="--color:#ff4d4d;">
+                <span>1000</span>
+                <p>Target</p>
+            </div>
+            <div class="stat" style="--color:#ffd300;">
+                <span id="remaining">1000</span>
+                <p>Remaining</p>
+            </div>
+        </div>
 
-        <!-- Main Dashboard -->
-        <main class="main-content">
-            <!-- Registration Section -->
-            <section id="registrationSection" class="registration-section">
-                <div class="registration-card glassmorphic">
-                    <div class="card-header">
-                        <h2>Register Your Contact</h2>
-                        <p>Join 1000+ contacts network</p>
-                    </div>
+        <h3 class="progress-title">Progress to Unlock: <span id="percent">0%</span></h3>
+        <div class="progress-bar">
+            <div id="progressFill" class="progress-fill"></div>
+        </div>
 
-                    <form id="registrationForm" class="registration-form">
-                        <!-- Profile Picture Upload -->
-                        <div class="profile-upload-section">
-                            <div class="profile-preview" id="profilePreview">
-                                <i class="fas fa-user"></i>
-                                <img id="profileImage" class="hidden" alt="Profile Preview">
-                                <div class="upload-overlay">
-                                    <i class="fas fa-camera"></i>
-                                </div>
-                            </div>
-                            <input type="file" id="profileInput" accept="image/*" class="hidden">
-                            <button type="button" class="btn-upload" onclick="document.getElementById('profileInput').click()">
-                                <i class="fas fa-cloud-upload-alt"></i>
-                                Upload Profile Picture
-                            </button>
-                        </div>
+        <div class="channel-box">
+            <p>VCF file will be released in our WhatsApp channel once we reach <b>1000 contacts</b></p>
+            <a href="https://whatsapp.com/channel/0029VbAjdiWBFLgXpS7VJz1u" class="whatsapp-btn" target="_blank">
+                <i class="fab fa-whatsapp"></i>
+                Join WhatsApp Channel
+            </a>
+            <button class="share-btn" onclick="shareToWhatsApp()">
+                <i class="fas fa-share-alt"></i>
+                Share with Friends
+            </button>
+        </div>
 
-                        <!-- Form Fields -->
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label for="fullName">
-                                    <i class="fas fa-user"></i>
-                                    Full Name
-                                </label>
-                                <input type="text" id="fullName" placeholder="Enter your full name" required>
-                            </div>
+        <div id="downloadSection" class="download-section hidden">
+            <div class="download-card">
+                <i class="fas fa-download"></i>
+                <h3>VCF File Ready!</h3>
+                <p>Download the complete contact list now</p>
+                <button class="download-btn" onclick="downloadVCF()">
+                    <i class="fas fa-download"></i>
+                    Download VCF
+                </button>
+            </div>
+        </div>
 
-                            <div class="form-group">
-                                <label for="phoneNumber">
-                                    <i class="fas fa-phone"></i>
-                                    Phone Number
-                                </label>
-                                <input type="tel" id="phoneNumber" placeholder="+255 XXX XXX XXX" required>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="email">
-                                    <i class="fas fa-envelope"></i>
-                                    Email Address
-                                </label>
-                                <input type="email" id="email" placeholder="your@email.com" required>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="occupation">
-                                    <i class="fas fa-briefcase"></i>
-                                    Occupation
-                                </label>
-                                <input type="text" id="occupation" placeholder="Your profession" required>
-                            </div>
-
-                            <div class="form-group full-width">
-                                <label for="additionalInfo">
-                                    <i class="fas fa-info-circle"></i>
-                                    Additional Information
-                                </label>
-                                <textarea id="additionalInfo" placeholder="Any additional details about yourself..." rows="3"></textarea>
-                            </div>
-                        </div>
-
-                        <button type="submit" class="btn-submit">
-                            <i class="fas fa-user-plus"></i>
-                            Register Contact
-                        </button>
-                    </form>
-                </div>
-            </section>
-
-            <!-- Stats Dashboard -->
-            <section class="stats-section">
-                <div class="stats-grid">
-                    <div class="stat-card glassmorphic">
-                        <div class="stat-icon">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <div class="stat-info">
-                            <h3 id="currentRegistrations">0</h3>
-                            <p>Current Registrations</p>
-                        </div>
-                        <div class="stat-progress">
-                            <div class="progress-bar">
-                                <div class="progress-fill" id="currentProgress"></div>
-                            </div>
-                            <span id="currentPercent">0%</span>
-                        </div>
-                    </div>
-
-                    <div class="stat-card glassmorphic">
-                        <div class="stat-icon">
-                            <i class="fas fa-bullseye"></i>
-                        </div>
-                        <div class="stat-info">
-                            <h3 id="targetRegistrations">1000</h3>
-                            <p>Target Contacts</p>
-                        </div>
-                    </div>
-
-                    <div class="stat-card glassmorphic">
-                        <div class="stat-icon">
-                            <i class="fas fa-clock"></i>
-                        </div>
-                        <div class="stat-info">
-                            <h3 id="remainingSlots">1000</h3>
-                            <p>Remaining Slots</p>
-                        </div>
-                        <div class="stat-progress">
-                            <div class="progress-bar">
-                                <div class="progress-fill remaining" id="remainingProgress"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Download Section (Hidden Initially) -->
-            <section id="downloadSection" class="download-section hidden">
-                <div class="download-card glassmorphic success">
-                    <div class="download-header">
-                        <i class="fas fa-check-circle"></i>
-                        <h2>VCF File Ready!</h2>
-                    </div>
-                    <p class="download-message">
-                        Congratulations! We've reached 1000 registrations. The VCF file containing all contacts is now available for download.
-                    </p>
-                    <button class="btn-download" onclick="downloadVCF()">
-                        <i class="fas fa-download"></i>
-                        Download VCF File
-                    </button>
-                    <p class="download-note">
-                        <i class="fas fa-info-circle"></i>
-                        This file contains all 1000 registered contacts in VCF format
-                    </p>
-                </div>
-            </section>
-
-            <!-- Action Buttons -->
-            <section class="action-section">
-                <div class="action-grid">
-                    <button class="action-btn share-btn" onclick="shareToWhatsApp()">
-                        <i class="fab fa-whatsapp"></i>
-                        Share with WhatsApp Groups
-                    </button>
-                    
-                    <a href="https://whatsapp.com/channel/0029VbAjdiWBFLgXpS7VJz1u" class="action-btn channel-btn" target="_blank">
-                        <i class="fab fa-whatsapp"></i>
-                        Follow WhatsApp Channel
-                    </a>
-
-                    <button class="action-btn info-btn" onclick="showChannelInfo()">
-                        <i class="fas fa-info-circle"></i>
-                        Channel Updates Info
-                    </button>
-                </div>
-            </section>
-
-            <!-- Recent Registrations -->
-            <section class="registrations-section">
-                <div class="registrations-card glassmorphic">
-                    <div class="card-header">
-                        <h3>Recent Registrations</h3>
-                        <span class="badge" id="totalCount">0</span>
-                    </div>
-                    <div class="registrations-list" id="registrationsList">
-                        <!-- Dynamic content will be added here -->
-                    </div>
-                </div>
-            </section>
-
-            <!-- Channel Information -->
-            <section class="info-section">
-                <div class="info-card glassmorphic">
-                    <div class="info-header">
-                        <i class="fab fa-whatsapp"></i>
-                        <h3>Important Information</h3>
-                    </div>
-                    <div class="info-content">
-                        <div class="info-item">
-                            <i class="fas fa-bell"></i>
-                            <div>
-                                <strong>All VCF Updates on WhatsApp Channel</strong>
-                                <p>Follow our channel to get the VCF file and future updates</p>
-                            </div>
-                        </div>
-                        <div class="info-item">
-                            <i class="fas fa-share-alt"></i>
-                            <div>
-                                <strong>Share with Friends</strong>
-                                <p>Invite others to register and help reach 1000 contacts faster</p>
-                            </div>
-                        </div>
-                        <div class="info-item">
-                            <i class="fas fa-download"></i>
-                            <div>
-                                <strong>Automatic Download</strong>
-                                <p>Download button will appear automatically when we reach 1000 registrations</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </main>
+        <div class="recent-registrations">
+            <h4>Recent Registrations</h4>
+            <div id="registrationsList" class="registrations-list">
+                <div class="empty">No registrations yet</div>
+            </div>
+        </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="firebase.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
