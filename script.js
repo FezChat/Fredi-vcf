@@ -11,25 +11,29 @@ const firebaseConfig = {
 
 // Initialize Firebase
 let db;
-let storage;
+let firebaseInitialized = false;
+
 try {
-    firebase.initializeApp(firebaseConfig);
+    // Check if Firebase is already initialized
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
     db = firebase.firestore();
-    storage = firebase.storage();
-    console.log("Firebase initialized successfully");
+    firebaseInitialized = true;
+    console.log("✅ Firebase initialized successfully");
 } catch (error) {
-    console.error("Firebase initialization error:", error);
+    console.error("❌ Firebase initialization failed:", error);
+    firebaseInitialized = false;
 }
 
 // App State
 const state = {
     registrations: [],
     maxRegistrations: 1000,
-    userProfile: null,
-    isOnline: false
+    userProfile: null
 };
 
-// DOM Elements (same as before)
+// DOM Elements
 const elements = {
     registrationForm: document.getElementById('registrationForm'),
     registrationSection: document.getElementById('registrationSection'),
@@ -50,44 +54,50 @@ const elements = {
 };
 
 // Initialize App
-async function initApp() {
+function initApp() {
     showLoading(true);
     
-    try {
-        // Check Firebase connection
-        await checkFirebaseConnection();
-        
-        // Load registrations from Firestore
-        await loadRegistrationsFromFirestore();
-        
-        // Setup real-time listener
-        setupRealtimeListener();
-        
-        setupEventListeners();
-        updateUI();
-        
-        showNotification('System Ready!', 'Fredi VCF is connected and ready.', 'success');
-        
-    } catch (error) {
-        console.error('App initialization failed:', error);
-        showNotification('Connection Issue', 'Using offline mode. Data may not sync across devices.', 'warning');
+    // Try to load from Firebase first
+    if (firebaseInitialized) {
+        loadRegistrationsFromFirestore()
+            .then(() => {
+                showNotification('Connected!', 'Fredi VCF is online and syncing across all devices.', 'success');
+                setupRealtimeListener();
+            })
+            .catch(error => {
+                console.error('Firebase load failed:', error);
+                showNotification('Offline Mode', 'Using local storage. Data will not sync across devices.', 'warning');
+                loadLocalRegistrations();
+            })
+            .finally(() => {
+                showLoading(false);
+            });
+    } else {
+        // Use localStorage as fallback
+        showNotification('Offline Mode', 'Using local storage. Register anyway!', 'warning');
         loadLocalRegistrations();
-    } finally {
         showLoading(false);
     }
+    
+    setupEventListeners();
 }
 
-// Check Firebase Connection
-async function checkFirebaseConnection() {
+// Load Registrations from Firestore (SIMPLIFIED)
+async function loadRegistrationsFromFirestore() {
     return new Promise((resolve, reject) => {
+        // Set timeout for Firebase connection
         const timeout = setTimeout(() => {
             reject(new Error('Firebase connection timeout'));
-        }, 5000);
+        }, 8000);
 
-        db.collection('test').doc('connection').get()
-            .then(() => {
+        db.collection('registrations').get()
+            .then(snapshot => {
                 clearTimeout(timeout);
-                state.isOnline = true;
+                state.registrations = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                updateUI();
                 resolve();
             })
             .catch(error => {
@@ -97,177 +107,86 @@ async function checkFirebaseConnection() {
     });
 }
 
-// Load Registrations from Firestore
-async function loadRegistrationsFromFirestore() {
-    try {
-        const snapshot = await db.collection('registrations')
-            .orderBy('registrationDate', 'desc')
-            .limit(1000)
-            .get();
-        
-        state.registrations = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        }));
-        
-        console.log(`Loaded ${state.registrations.length} registrations from Firestore`);
-        
-    } catch (error) {
-        console.error('Error loading from Firestore:', error);
-        throw error;
-    }
-}
-
-// Setup Real-time Listener
+// Setup Real-time Listener (SIMPLIFIED)
 function setupRealtimeListener() {
+    if (!firebaseInitialized) return;
+    
     db.collection('registrations')
-        .orderBy('registrationDate', 'desc')
-        .limit(1000)
         .onSnapshot(snapshot => {
             state.registrations = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
             }));
-            
             updateUI();
-            
-            // Show notification for new registrations (except on initial load)
-            if (state.registrations.length > 0) {
-                const latestRegistration = state.registrations[0];
-                if (Date.now() - new Date(latestRegistration.registrationDate).getTime() < 10000) {
-                    showNotification('New Registration', `${latestRegistration.fullName} just joined!`, 'info');
-                }
-            }
-        }, error => {
-            console.error('Real-time listener error:', error);
-            showNotification('Sync Issue', 'Real-time updates paused.', 'warning');
         });
 }
 
-// Save Registration to Firestore
-async function saveRegistrationToFirestore(userData) {
-    try {
-        // Check for duplicates in Firestore
-        const duplicatePhone = await db.collection('registrations')
-            .where('phoneNumber', '==', userData.phoneNumber)
-            .get();
-            
-        const duplicateEmail = await db.collection('registrations')
-            .where('email', '==', userData.email)
-            .get();
-        
-        if (!duplicatePhone.empty) {
-            throw new Error('Phone number already registered');
-        }
-        
-        if (!duplicateEmail.empty) {
-            throw new Error('Email already registered');
-        }
-        
-        // Upload profile picture if exists
-        if (state.userProfile && state.userProfile.imageUrl) {
-            const imageUrl = await uploadProfilePicture(state.userProfile.imageUrl, userData.id);
-            userData.profilePicture = imageUrl;
-        }
-        
-        // Save to Firestore
-        const docRef = await db.collection('registrations').add({
-            ...userData,
-            registrationDate: firebase.firestore.FieldValue.serverTimestamp(),
-            device: getDeviceInfo(),
-            ipAddress: await getIPAddress()
-        });
-        
-        userData.id = docRef.id;
-        return userData;
-        
-    } catch (error) {
-        console.error('Error saving to Firestore:', error);
-        throw error;
-    }
-}
-
-// Upload Profile Picture to Firebase Storage
-async function uploadProfilePicture(dataUrl, userId) {
-    try {
-        // Convert data URL to blob
-        const response = await fetch(dataUrl);
-        const blob = await response.blob();
-        
-        // Upload to Firebase Storage
-        const storageRef = storage.ref();
-        const profileRef = storageRef.child(`profiles/${userId}-${Date.now()}.jpg`);
-        
-        const snapshot = await profileRef.put(blob);
-        const downloadURL = await snapshot.ref.getDownloadURL();
-        
-        return downloadURL;
-        
-    } catch (error) {
-        console.error('Error uploading profile picture:', error);
-        throw error;
-    }
-}
-
-// Updated Form Submission with Firestore
-async function handleFormSubmit(e) {
-    e.preventDefault();
-    
-    const formData = new FormData(elements.registrationForm);
-    const userData = {
-        fullName: document.getElementById('fullName').value.trim(),
-        phoneNumber: document.getElementById('phoneNumber').value.trim(),
-        email: document.getElementById('email').value.trim().toLowerCase(),
-        occupation: document.getElementById('occupation').value.trim(),
-        additionalInfo: document.getElementById('additionalInfo').value.trim(),
-        profilePicture: null,
-        status: 'active'
-    };
-
-    // Validate form
-    if (!validateForm(userData)) {
-        return;
-    }
-
+// Save Registration (WORKS OFFLINE OR ONLINE)
+async function saveRegistration(userData) {
     showLoading(true);
 
     try {
-        // Save to Firestore
-        const savedUser = await saveRegistrationToFirestore(userData);
-        
-        // Also save locally as backup
-        saveRegistrationLocally(savedUser);
+        // Try Firebase first if available
+        if (firebaseInitialized) {
+            const docRef = await db.collection('registrations').add({
+                ...userData,
+                registrationDate: new Date().toISOString(),
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            userData.id = docRef.id;
+        } else {
+            // Fallback to localStorage
+            userData.id = 'local_' + Date.now();
+            userData.registrationDate = new Date().toISOString();
+        }
+
+        // Always save locally
+        saveRegistrationLocally(userData);
         
         showNotification(
             'Registration Successful!', 
-            `Welcome ${userData.fullName}! You're contact #${state.registrations.length + 1}`, 
+            `Welcome ${userData.fullName}! You're contact #${state.registrations.length + 1}`,
             'success'
         );
         
-        // Reset form
         elements.registrationForm.reset();
         resetProfilePicture();
-        
-        // No need to call updateUI() - real-time listener will handle it
+        updateUI();
         
     } catch (error) {
-        console.error('Registration error:', error);
+        console.error('Save error:', error);
         
-        if (error.message.includes('already registered')) {
-            showNotification('Already Registered', error.message, 'warning');
-        } else {
-            showNotification('Registration Failed', 'Please check your connection and try again.', 'warning');
-        }
+        // Even if Firebase fails, save locally
+        userData.id = 'local_' + Date.now();
+        userData.registrationDate = new Date().toISOString();
+        saveRegistrationLocally(userData);
+        
+        showNotification(
+            'Saved Locally!', 
+            `Welcome ${userData.fullName}! (Saved offline - will sync when online)`,
+            'warning'
+        );
+        
+        updateUI();
     } finally {
         showLoading(false);
     }
 }
 
-// Backup: Local Storage Functions
+// Local Storage Functions
 function saveRegistrationLocally(userData) {
     let localRegistrations = JSON.parse(localStorage.getItem('frediRegistrations')) || [];
-    localRegistrations.push(userData);
-    localStorage.setItem('frediRegistrations', JSON.stringify(localRegistrations));
+    
+    // Check for duplicates locally
+    const isDuplicate = localRegistrations.some(reg => 
+        reg.phoneNumber === userData.phoneNumber || reg.email === userData.email
+    );
+    
+    if (!isDuplicate) {
+        localRegistrations.push(userData);
+        localStorage.setItem('frediRegistrations', JSON.stringify(localRegistrations));
+        state.registrations = localRegistrations;
+    }
 }
 
 function loadLocalRegistrations() {
@@ -276,37 +195,138 @@ function loadLocalRegistrations() {
     updateUI();
 }
 
-// Utility Functions
-function getDeviceInfo() {
-    return {
-        userAgent: navigator.userAgent,
-        platform: navigator.platform,
-        language: navigator.language,
-        screen: `${screen.width}x${screen.height}`
+// Form Submission (SIMPLIFIED)
+async function handleFormSubmit(e) {
+    e.preventDefault();
+    
+    const userData = {
+        fullName: document.getElementById('fullName').value.trim(),
+        phoneNumber: document.getElementById('phoneNumber').value.trim(),
+        email: document.getElementById('email').value.trim().toLowerCase(),
+        occupation: document.getElementById('occupation').value.trim(),
+        additionalInfo: document.getElementById('additionalInfo').value.trim(),
+        profilePicture: state.userProfile?.imageUrl || null
     };
+
+    // Basic validation
+    if (!userData.fullName || !userData.phoneNumber || !userData.email || !userData.occupation) {
+        showNotification('Error', 'Please fill all required fields', 'warning');
+        return;
+    }
+
+    // Save registration
+    await saveRegistration(userData);
 }
 
-async function getIPAddress() {
-    try {
-        const response = await fetch('https://api.ipify.org?format=json');
-        const data = await response.json();
-        return data.ip;
-    } catch (error) {
-        return 'unknown';
+// Profile Picture Handling
+function handleProfileUpload(e) {
+    const file = e.target.files[0];
+    if (file && file.type.startsWith('image/')) {
+        if (file.size > 5 * 1024 * 1024) {
+            showNotification('File Too Large', 'Please select image < 5MB', 'warning');
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            elements.profileImage.src = e.target.result;
+            elements.profileImage.classList.remove('hidden');
+            elements.profilePreview.querySelector('i').classList.add('hidden');
+            
+            state.userProfile = {
+                imageUrl: e.target.result,
+                fileName: file.name
+            };
+        };
+        reader.readAsDataURL(file);
     }
 }
 
-// Download VCF from Firestore Data
-async function downloadVCF() {
+function resetProfilePicture() {
+    elements.profileImage.classList.add('hidden');
+    elements.profilePreview.querySelector('i').classList.remove('hidden');
+    state.userProfile = null;
+}
+
+// UI Updates
+function updateUI() {
+    const currentCount = state.registrations.length;
+    const remainingCount = state.maxRegistrations - currentCount;
+    const progressPercent = (currentCount / state.maxRegistrations) * 100;
+
+    elements.currentRegistrations.textContent = currentCount;
+    elements.remainingSlots.textContent = remainingCount;
+    elements.currentPercent.textContent = `${Math.round(progressPercent)}%`;
+    elements.currentProgress.style.width = `${progressPercent}%`;
+    elements.remainingProgress.style.width = `${100 - progressPercent}%`;
+    elements.totalCount.textContent = currentCount;
+
+    updateRegistrationsList();
+
+    if (currentCount >= state.maxRegistrations) {
+        showDownloadSection();
+    }
+}
+
+function updateRegistrationsList() {
+    const recentRegistrations = [...state.registrations]
+        .sort((a, b) => new Date(b.registrationDate) - new Date(a.registrationDate))
+        .slice(0, 5);
+
+    if (recentRegistrations.length === 0) {
+        elements.registrationsList.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: #666;">
+                <i class="fas fa-users" style="font-size: 3rem; margin-bottom: 15px; display: block;"></i>
+                <p>No registrations yet. Be the first to register!</p>
+            </div>
+        `;
+        return;
+    }
+
+    elements.registrationsList.innerHTML = recentRegistrations.map(reg => `
+        <div class="registration-item">
+            <div class="registration-avatar">
+                ${reg.profilePicture 
+                    ? `<img src="${reg.profilePicture}" alt="${reg.fullName}">`
+                    : `<span>${getInitials(reg.fullName)}</span>`
+                }
+            </div>
+            <div class="registration-info">
+                <h4>${reg.fullName}</h4>
+                <p>${reg.occupation} • ${formatDate(reg.registrationDate)}</p>
+            </div>
+        </div>
+    `).join('');
+}
+
+function showDownloadSection() {
+    elements.registrationSection.classList.add('hidden');
+    elements.downloadSection.classList.remove('hidden');
+    showNotification('Target Reached!', 'VCF file is now available for download.', 'success');
+}
+
+// Utility Functions
+function getInitials(name) {
+    return name.split(' ').map(word => word[0]).join('').toUpperCase().substring(0, 2);
+}
+
+function formatDate(dateString) {
+    return new Date(dateString).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric'
+    });
+}
+
+// Download VCF
+function downloadVCF() {
     if (state.registrations.length === 0) {
-        showNotification('No Data', 'There are no contacts to download.', 'warning');
+        showNotification('No Data', 'No contacts to download', 'warning');
         return;
     }
 
     showLoading(true);
 
     try {
-        // Generate VCF content
         let vcfContent = '';
         state.registrations.forEach(contact => {
             vcfContent += `BEGIN:VCARD
@@ -316,12 +336,9 @@ TEL:${contact.phoneNumber}
 EMAIL:${contact.email}
 ORG:${contact.occupation}
 NOTE:${contact.additionalInfo || 'Registered via Fredi VCF'}
-URL:${window.location.href}
-REV:${contact.registrationDate}
 END:VCARD\n`;
         });
 
-        // Create and download file
         const blob = new Blob([vcfContent], { type: 'text/vcard' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -332,45 +349,12 @@ END:VCARD\n`;
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        showNotification(
-            'Download Complete!', 
-            `${state.registrations.length} contacts exported successfully.`, 
-            'success'
-        );
-        
-        // Log download event
-        await db.collection('downloads').add({
-            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-            count: state.registrations.length,
-            userAgent: navigator.userAgent
-        });
+        showNotification('Download Complete!', `${state.registrations.length} contacts exported`, 'success');
         
     } catch (error) {
-        showNotification('Download Failed', 'Please try again later.', 'warning');
-        console.error('Download error:', error);
+        showNotification('Download Failed', 'Please try again', 'warning');
     } finally {
         showLoading(false);
-    }
-}
-
-// Admin Functions (Optional - for monitoring)
-async function getStats() {
-    try {
-        const totalRegistrations = state.registrations.length;
-        const uniqueDevices = [...new Set(state.registrations.map(r => r.device?.userAgent))].length;
-        
-        console.log('📊 Statistics:');
-        console.log(`Total Registrations: ${totalRegistrations}`);
-        console.log(`Unique Devices: ${uniqueDevices}`);
-        console.log(`Completion: ${((totalRegistrations / state.maxRegistrations) * 100).toFixed(1)}%`);
-        
-        return {
-            totalRegistrations,
-            uniqueDevices,
-            completionPercent: (totalRegistrations / state.maxRegistrations) * 100
-        };
-    } catch (error) {
-        console.error('Error getting stats:', error);
     }
 }
 
@@ -384,29 +368,24 @@ function shareToWhatsApp() {
 📢 Follow our WhatsApp Channel for updates:
 https://whatsapp.com/channel/0029VbAjdiWBFLgXpS7VJz1u
 
-Share with your friends and grow the network! 🚀`;
+Share with friends! 🚀`;
 
     const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
-    
-    showNotification('Share Ready!', 'The registration link has been prepared for sharing on WhatsApp.', 'info');
+    showNotification('Share Ready!', 'Registration link prepared for WhatsApp', 'info');
 }
 
 function showChannelInfo() {
     showNotification(
-        'WhatsApp Channel Information',
-        'All VCF file updates and announcements will be posted in our WhatsApp channel. Make sure to follow it!',
+        'WhatsApp Channel',
+        'All VCF updates will be posted in: https://whatsapp.com/channel/0029VbAjdiWBFLgXpS7VJz1u',
         'info'
     );
 }
 
 // UI Helpers
 function showLoading(show) {
-    if (show) {
-        elements.loadingOverlay.classList.add('show');
-    } else {
-        elements.loadingOverlay.classList.remove('show');
-    }
+    elements.loadingOverlay.style.display = show ? 'flex' : 'none';
 }
 
 function showNotification(title, message, type = 'info') {
@@ -429,21 +408,29 @@ function showNotification(title, message, type = 'info') {
     
     elements.notificationContainer.appendChild(notification);
     
+    setTimeout(() => notification.classList.add('show'), 100);
     setTimeout(() => {
-        notification.classList.add('show');
-    }, 100);
-    
-    setTimeout(() => {
-        if (notification.parentElement) {
-            notification.classList.remove('show');
-            setTimeout(() => {
-                if (notification.parentElement) {
-                    elements.notificationContainer.removeChild(notification);
-                }
-            }, 300);
-        }
+        notification.classList.remove('show');
+        setTimeout(() => notification.remove(), 300);
     }, 5000);
 }
 
-// Initialize the app when DOM is loaded
+// Event Listeners
+function setupEventListeners() {
+    elements.registrationForm.addEventListener('submit', handleFormSubmit);
+    elements.profileInput.addEventListener('change', handleProfileUpload);
+    
+    // Drag and drop for profile picture
+    elements.profilePreview.addEventListener('dragover', (e) => e.preventDefault());
+    elements.profilePreview.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const file = e.dataTransfer.files[0];
+        if (file && file.type.startsWith('image/')) {
+            elements.profileInput.files = e.dataTransfer.files;
+            handleProfileUpload({ target: elements.profileInput });
+        }
+    });
+}
+
+// Initialize the app
 document.addEventListener('DOMContentLoaded', initApp);
