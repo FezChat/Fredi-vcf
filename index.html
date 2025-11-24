@@ -6,10 +6,6 @@
     <title>Fredi VCF</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css" />
-    
-    <!-- Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 </head>
 <body>
     <div class="background"></div>
@@ -19,16 +15,16 @@
         <p class="subtitle">Create & Share Global Contacts Instantly</p>
         
         <div class="form-card">
-            <label>Full Name</label>
-            <input id="name" type="text" placeholder="Your full name">
+            <label>Full Name *</label>
+            <input id="name" type="text" placeholder="Your full name" required>
             
-            <label>Phone Number</label>
-            <input id="phone" type="text" placeholder="+255700000000">
+            <label>Phone Number *</label>
+            <input id="phone" type="text" placeholder="+255700000000" required>
             
-            <label>Email</label>
-            <input id="email" type="email" placeholder="your@email.com">
+            <label>Email *</label>
+            <input id="email" type="email" placeholder="your@email.com" required>
             
-            <button id="submitBtn" onclick="registerUser()">
+            <button id="submitBtn">
                 <i class="fas fa-user-plus"></i>
                 Submit Details to VCF
             </button>
@@ -42,8 +38,14 @@
                 <i class="fas fa-check-circle"></i>
                 Contact submitted successfully!
             </p>
+
+            <p id="error" class="error hidden">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span id="errorText">Error message</span>
+            </p>
         </div>
 
+        <!-- Rest of your HTML remains the same -->
         <div class="stats">
             <div class="stat" style="--color:#1e90ff;">
                 <span id="current">0</span>
@@ -96,7 +98,6 @@
         </div>
     </div>
 
-    <script src="firebase.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
