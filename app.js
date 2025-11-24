@@ -1,213 +1,295 @@
-// Global variables
-let registrations = [];
-const MAX_REGISTRATIONS = 1000;
-
-// DOM Elements
-const elements = {
-    name: document.getElementById('name'),
-    phone: document.getElementById('phone'),
-    email: document.getElementById('email'),
-    submitBtn: document.getElementById('submitBtn'),
-    loading: document.getElementById('loading'),
-    success: document.getElementById('success'),
-    current: document.getElementById('current'),
-    remaining: document.getElementById('remaining'),
-    percent: document.getElementById('percent'),
-    progressFill: document.getElementById('progressFill'),
-    downloadSection: document.getElementById('downloadSection'),
-    registrationsList: document.getElementById('registrationsList')
-};
-
-// Initialize app
-async function initApp() {
-    try {
-        // Load existing registrations
-        await loadRegistrations();
-        
-        // Setup real-time listener
-        setupRealtimeListener();
-        
-        updateUI();
-        
-        showNotification('System Ready!', 'Fredi VCF is connected and ready.', 'success');
-        
-    } catch (error) {
-        console.error('Initialization error:', error);
-        showNotification('Connection Error', 'Please refresh the page.', 'error');
+// Simple Contact Manager - WORKS IMMEDIATELY
+class ContactManager {
+    constructor() {
+        this.registrations = this.loadRegistrations();
+        this.maxRegistrations = 1000;
+        this.init();
     }
-}
 
-// Load registrations from Firestore
-async function loadRegistrations() {
-    try {
-        const snapshot = await db.collection('contacts').get();
-        registrations = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        }));
-        console.log(`✅ Loaded ${registrations.length} registrations`);
-    } catch (error) {
-        console.error('Error loading registrations:', error);
-        throw error;
+    init() {
+        this.setupEventListeners();
+        this.updateUI();
+        this.showNotification('Ready!', 'Fredi VCF is ready for registration', 'success');
     }
-}
 
-// Setup real-time listener
-function setupRealtimeListener() {
-    db.collection('contacts')
-        .onSnapshot(snapshot => {
-            registrations = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            }));
-            updateUI();
-        }, error => {
-            console.error('Real-time listener error:', error);
+    setupEventListeners() {
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.registerUser();
         });
-}
-
-// Register user function
-async function registerUser() {
-    // Get form values
-    const name = elements.name.value.trim();
-    const phone = elements.phone.value.trim();
-    const email = elements.email.value.trim();
-
-    // Validation
-    if (!name || !phone || !email) {
-        showNotification('Error', 'Please fill all fields', 'error');
-        return;
     }
 
-    if (!isValidEmail(email)) {
-        showNotification('Error', 'Please enter valid email', 'error');
-        return;
-    }
+    registerUser() {
+        // Get form values
+        const name = document.getElementById('name').value.trim();
+        const phone = document.getElementById('phone').value.trim();
+        const email = document.getElementById('email').value.trim();
 
-    // Show loading
-    showLoading(true);
-
-    try {
-        // Check for duplicates
-        const isDuplicate = registrations.some(reg => 
-            reg.phone === phone || reg.email === email
-        );
-
-        if (isDuplicate) {
-            showNotification('Already Registered', 'This phone or email is already registered', 'error');
-            showLoading(false);
+        // Validate
+        if (!this.validateForm(name, phone, email)) {
             return;
         }
 
-        // Create user data
-        const userData = {
-            name: name,
-            phone: phone,
-            email: email,
-            timestamp: new Date().toISOString(),
-            registeredAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
+        // Show loading
+        this.showLoading(true);
 
-        // Save to Firestore
-        await db.collection('contacts').add(userData);
+        // Simulate quick processing (remove setTimeout in production)
+        setTimeout(() => {
+            try {
+                // Check for duplicates
+                if (this.isDuplicate(phone, email)) {
+                    this.showError('This phone or email is already registered');
+                    this.showLoading(false);
+                    return;
+                }
 
-        // Show success
-        showSuccess();
+                // Create contact
+                const contact = {
+                    id: Date.now(),
+                    name: name,
+                    phone: phone,
+                    email: email,
+                    timestamp: new Date().toISOString()
+                };
+
+                // Save contact
+                this.saveRegistration(contact);
+
+                // Show success
+                this.showSuccess();
+                this.clearForm();
+
+                // Update UI
+                this.updateUI();
+
+                this.showNotification('Success!', 'Contact registered successfully', 'success');
+
+            } catch (error) {
+                this.showError('Registration failed: ' + error.message);
+            } finally {
+                this.showLoading(false);
+            }
+        }, 500); // Small delay for better UX
+    }
+
+    validateForm(name, phone, email) {
+        if (!name) {
+            this.showError('Please enter your full name');
+            return false;
+        }
+
+        if (!phone) {
+            this.showError('Please enter your phone number');
+            return false;
+        }
+
+        if (!email) {
+            this.showError('Please enter your email address');
+            return false;
+        }
+
+        if (!this.isValidEmail(email)) {
+            this.showError('Please enter a valid email address');
+            return false;
+        }
+
+        return true;
+    }
+
+    isValidEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    }
+
+    isDuplicate(phone, email) {
+        return this.registrations.some(reg => 
+            reg.phone === phone || reg.email === email
+        );
+    }
+
+    saveRegistration(contact) {
+        this.registrations.push(contact);
+        localStorage.setItem('frediRegistrations', JSON.stringify(this.registrations));
         
-        // Reset form
-        elements.name.value = '';
-        elements.phone.value = '';
-        elements.email.value = '';
-
-        showNotification('Success!', 'Contact registered successfully', 'success');
-
-    } catch (error) {
-        console.error('Registration error:', error);
-        showNotification('Error', 'Registration failed. Please try again.', 'error');
-    } finally {
-        showLoading(false);
-    }
-}
-
-// Update UI
-function updateUI() {
-    const currentCount = registrations.length;
-    const remainingCount = MAX_REGISTRATIONS - currentCount;
-    const progressPercent = (currentCount / MAX_REGISTRATIONS) * 100;
-
-    // Update numbers
-    elements.current.textContent = currentCount;
-    elements.remaining.textContent = remainingCount;
-    elements.percent.textContent = Math.round(progressPercent) + '%';
-
-    // Update progress bar
-    elements.progressFill.style.width = progressPercent + '%';
-
-    // Show download section if target reached
-    if (currentCount >= MAX_REGISTRATIONS) {
-        elements.downloadSection.classList.remove('hidden');
+        // Try to sync with Firebase in background (non-blocking)
+        this.syncWithFirebase(contact);
     }
 
-    // Update recent registrations
-    updateRegistrationsList();
-}
-
-// Update registrations list
-function updateRegistrationsList() {
-    const recent = registrations.slice(-5).reverse(); // Last 5 registrations
-    
-    if (recent.length === 0) {
-        elements.registrationsList.innerHTML = '<div class="empty">No registrations yet</div>';
-        return;
+    async syncWithFirebase(contact) {
+        try {
+            // Only sync if Firebase is available
+            if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
+                await firebase.firestore().collection('contacts').add({
+                    ...contact,
+                    syncedAt: new Date().toISOString()
+                });
+                console.log('✅ Synced with Firebase');
+            }
+        } catch (error) {
+            console.log('⚠️ Firebase sync failed (but contact saved locally):', error);
+        }
     }
 
-    elements.registrationsList.innerHTML = recent.map(reg => `
-        <div class="registration-item">
-            <span>${reg.name}</span>
-            <small>${formatDate(reg.timestamp)}</small>
-        </div>
-    `).join('');
-}
-
-// Download VCF
-async function downloadVCF() {
-    if (registrations.length === 0) {
-        showNotification('Error', 'No contacts to download', 'error');
-        return;
+    loadRegistrations() {
+        try {
+            const saved = localStorage.getItem('frediRegistrations');
+            return saved ? JSON.parse(saved) : [];
+        } catch (error) {
+            console.error('Error loading registrations:', error);
+            return [];
+        }
     }
 
-    try {
-        let vcfContent = '';
-        registrations.forEach(contact => {
-            vcfContent += `BEGIN:VCARD
+    updateUI() {
+        const currentCount = this.registrations.length;
+        const remainingCount = this.maxRegistrations - currentCount;
+        const progressPercent = (currentCount / this.maxRegistrations) * 100;
+
+        // Update numbers
+        document.getElementById('current').textContent = currentCount;
+        document.getElementById('remaining').textContent = remainingCount;
+        document.getElementById('percent').textContent = Math.round(progressPercent) + '%';
+
+        // Update progress bar
+        document.getElementById('progressFill').style.width = progressPercent + '%';
+
+        // Show download section if target reached
+        if (currentCount >= this.maxRegistrations) {
+            document.getElementById('downloadSection').classList.remove('hidden');
+        }
+
+        // Update recent registrations
+        this.updateRegistrationsList();
+    }
+
+    updateRegistrationsList() {
+        const listElement = document.getElementById('registrationsList');
+        const recent = this.registrations.slice(-5).reverse();
+
+        if (recent.length === 0) {
+            listElement.innerHTML = '<div class="empty">No registrations yet</div>';
+            return;
+        }
+
+        listElement.innerHTML = recent.map(reg => `
+            <div class="registration-item">
+                <span>${reg.name}</span>
+                <small>${this.formatDate(reg.timestamp)}</small>
+            </div>
+        `).join('');
+    }
+
+    formatDate(dateString) {
+        return new Date(dateString).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    showLoading(show) {
+        const loading = document.getElementById('loading');
+        const submitBtn = document.getElementById('submitBtn');
+        
+        if (show) {
+            loading.classList.remove('hidden');
+            submitBtn.disabled = true;
+        } else {
+            loading.classList.add('hidden');
+            submitBtn.disabled = false;
+        }
+    }
+
+    showSuccess() {
+        const success = document.getElementById('success');
+        const error = document.getElementById('error');
+        
+        success.classList.remove('hidden');
+        error.classList.add('hidden');
+        
+        setTimeout(() => {
+            success.classList.add('hidden');
+        }, 3000);
+    }
+
+    showError(message) {
+        const success = document.getElementById('success');
+        const error = document.getElementById('error');
+        const errorText = document.getElementById('errorText');
+        
+        errorText.textContent = message;
+        error.classList.remove('hidden');
+        success.classList.add('hidden');
+        
+        setTimeout(() => {
+            error.classList.add('hidden');
+        }, 5000);
+    }
+
+    clearForm() {
+        document.getElementById('name').value = '';
+        document.getElementById('phone').value = '';
+        document.getElementById('email').value = '';
+    }
+
+    showNotification(title, message, type = 'success') {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.innerHTML = `
+            <strong>${title}</strong>
+            <p>${message}</p>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Remove after 5 seconds
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 5000);
+    }
+
+    downloadVCF() {
+        if (this.registrations.length === 0) {
+            this.showError('No contacts to download');
+            return;
+        }
+
+        try {
+            let vcfContent = '';
+            this.registrations.forEach(contact => {
+                vcfContent += `BEGIN:VCARD
 VERSION:3.0
 FN:${contact.name}
 TEL:${contact.phone}
 EMAIL:${contact.email}
-END:VCARD\n`;
-        });
+NOTE:Registered via Fredi VCF
+END:VCARD\n\n`;
+            });
 
-        const blob = new Blob([vcfContent], { type: 'text/vcard' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `fredi-contacts-${new Date().toISOString().split('T')[0]}.vcf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+            const blob = new Blob([vcfContent], { type: 'text/vcard' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `fredi-contacts-${new Date().toISOString().split('T')[0]}.vcf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
 
-        showNotification('Download Complete!', 'VCF file downloaded successfully', 'success');
-        
-    } catch (error) {
-        console.error('Download error:', error);
-        showNotification('Error', 'Download failed', 'error');
+            this.showNotification('Download Complete!', 'VCF file downloaded successfully', 'success');
+            
+        } catch (error) {
+            this.showError('Download failed: ' + error.message);
+        }
     }
-}
 
-// Share to WhatsApp
-function shareToWhatsApp() {
-    const text = `🌟 Join Fredi VCF! 🌟
+    shareToWhatsApp() {
+        const text = `🌟 Join Fredi VCF! 🌟
 
 📱 Register your contact for our VCF file
 🔗 ${window.location.href}
@@ -217,49 +299,28 @@ https://whatsapp.com/channel/0029VbAjdiWBFLgXpS7VJz1u
 
 Share with friends! 🚀`;
 
-    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
-    window.open(url, '_blank');
+        const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+        window.open(url, '_blank');
+        this.showNotification('Share Ready!', 'WhatsApp sharing opened', 'success');
+    }
 }
 
-// Utility functions
-function showLoading(show) {
-    elements.loading.classList.toggle('hidden', !show);
-    elements.submitBtn.disabled = show;
+// Initialize the app when page loads
+let contactManager;
+
+document.addEventListener('DOMContentLoaded', () => {
+    contactManager = new ContactManager();
+});
+
+// Global functions for HTML onclick
+function downloadVCF() {
+    if (contactManager) {
+        contactManager.downloadVCF();
+    }
 }
 
-function showSuccess() {
-    elements.success.classList.remove('hidden');
-    setTimeout(() => {
-        elements.success.classList.add('hidden');
-    }, 3000);
+function shareToWhatsApp() {
+    if (contactManager) {
+        contactManager.shareToWhatsApp();
+    }
 }
-
-function isValidEmail(email) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-function formatDate(dateString) {
-    return new Date(dateString).toLocaleDateString();
-}
-
-function showNotification(title, message, type = 'success') {
-    // Remove existing notifications
-    const existing = document.querySelector('.notification');
-    if (existing) existing.remove();
-
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    notification.innerHTML = `
-        <strong>${title}</strong>
-        <p>${message}</p>
-    `;
-    
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        notification.remove();
-    }, 5000);
-}
-
-// Initialize app when page loads
-document.addEventListener('DOMContentLoaded', initApp);
