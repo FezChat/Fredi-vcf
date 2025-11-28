@@ -2,8 +2,8 @@
 const SUPABASE_URL = 'https://xhsnuyouuzwrktyisnhv.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhoc251eW91dXp3cmt0eWlzbmh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzMDAyNjIsImV4cCI6MjA3OTg3NjI2Mn0.vUuFmMKUS8H5fYqStvWv8lQN-mnRfvBb-uGQd7LAZuE';
 
-// Initialize Supabase client
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// Initialize Supabase client - FIXED
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Application State
 let registeredUsers = 0;
@@ -30,6 +30,7 @@ const userPhotoInput = document.getElementById('userPhoto');
 
 // Initialize the application
 async function initApp() {
+    console.log("Initializing app...");
     updateDashboard();
     startCountdown();
     setupEventListeners();
@@ -40,17 +41,19 @@ async function initApp() {
 // Load registration data from Supabase
 async function loadRegistrationData() {
     try {
-        const { data, error } = await supabase
+        console.log("Loading registration data...");
+        const { data, error, count } = await supabase
             .from('registrations')
-            .select('*');
+            .select('*', { count: 'exact' });
 
         if (error) {
             console.error('Error loading registration data:', error);
-            showNotification('Error loading registration data', 'error');
+            showNotification('Error loading registration data: ' + error.message, 'error');
             return;
         }
 
-        registeredUsers = data ? data.length : 0;
+        registeredUsers = count || 0;
+        console.log("Loaded users:", registeredUsers);
         updateDashboard();
 
         // Check if target is already reached
@@ -66,6 +69,7 @@ async function loadRegistrationData() {
 
 // Setup real-time subscription for new registrations
 function setupRealtimeSubscription() {
+    console.log("Setting up real-time subscription...");
     const subscription = supabase
         .channel('registrations')
         .on('postgres_changes', 
@@ -75,6 +79,7 @@ function setupRealtimeSubscription() {
                 table: 'registrations' 
             }, 
             (payload) => {
+                console.log('New registration received:', payload);
                 // New registration added
                 registeredUsers++;
                 updateDashboard();
@@ -91,7 +96,9 @@ function setupRealtimeSubscription() {
                 }
             }
         )
-        .subscribe();
+        .subscribe((status) => {
+            console.log('Subscription status:', status);
+        });
 
     return subscription;
 }
@@ -100,6 +107,8 @@ function setupRealtimeSubscription() {
 function updateDashboard() {
     const progress = (registeredUsers / targetUsers) * 100;
     const remaining = targetUsers - registeredUsers;
+    
+    console.log("Updating dashboard - Registered:", registeredUsers, "Progress:", progress);
     
     // Update circle values
     registeredCountEl.textContent = registeredUsers;
@@ -181,6 +190,7 @@ function showVcfDashboard() {
 
 // Setup event listeners
 function setupEventListeners() {
+    console.log("Setting up event listeners...");
     // Registration button
     registerBtn.addEventListener('click', handleRegistration);
     
@@ -210,12 +220,15 @@ function handleProfilePictureUpload(event) {
     }
 }
 
-// Handle user registration
+// Handle user registration - SIMPLIFIED VERSION
 async function handleRegistration() {
+    console.log("Registration button clicked");
+    
     const name = document.getElementById('userName').value.trim();
     const email = document.getElementById('userEmail').value.trim();
     const phone = document.getElementById('userPhone').value.trim();
-    const profileFile = userPhotoInput.files[0];
+    
+    console.log("Form data:", { name, email, phone });
     
     // Validation
     if (!name || !email || !phone) {
@@ -233,51 +246,37 @@ async function handleRegistration() {
         return;
     }
 
-    // Check if user already exists
-    const { data: existingUser } = await supabase
-        .from('registrations')
-        .select('id')
-        .eq('email', email)
-        .single();
+    // Disable button to prevent double registration
+    registerBtn.disabled = true;
+    registerBtn.textContent = 'Registering...';
 
-    if (existingUser) {
-        showNotification("This email is already registered", "error");
-        return;
-    }
-    
     try {
-        let profilePictureUrl = null;
+        // Check if user already exists
+        const { data: existingUser, error: checkError } = await supabase
+            .from('registrations')
+            .select('id')
+            .eq('email', email)
+            .maybeSingle();
 
-        // Upload profile picture if provided
-        if (profileFile) {
-            const fileExt = profileFile.name.split('.').pop();
-            const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-            
-            const { data: uploadData, error: uploadError } = await supabase.storage
-                .from('profile-pictures')
-                .upload(fileName, profileFile);
-
-            if (uploadError) {
-                console.error('Error uploading profile picture:', uploadError);
-            } else {
-                // Get public URL
-                const { data: urlData } = supabase.storage
-                    .from('profile-pictures')
-                    .getPublicUrl(fileName);
-                
-                profilePictureUrl = urlData.publicUrl;
-            }
+        if (checkError) {
+            console.error('Error checking existing user:', checkError);
         }
 
-        // Save registration to database
+        if (existingUser) {
+            showNotification("This email is already registered", "error");
+            registerBtn.disabled = false;
+            registerBtn.textContent = 'Register Now';
+            return;
+        }
+        
+        // Save registration to database - WITHOUT profile picture first
         const { data, error } = await supabase
             .from('registrations')
             .insert([
                 { 
                     name: name, 
                     email: email, 
-                    phone: phone, 
-                    profile_picture: profilePictureUrl,
+                    phone: phone,
                     created_at: new Date().toISOString()
                 }
             ])
@@ -285,15 +284,16 @@ async function handleRegistration() {
 
         if (error) {
             console.error('Registration error:', error);
-            showNotification('Registration failed. Please try again.', 'error');
+            showNotification('Registration failed: ' + error.message, 'error');
+            registerBtn.disabled = false;
+            registerBtn.textContent = 'Register Now';
             return;
         }
 
-        // Note: The real-time subscription will update the count automatically
-        // So we don't need to manually increment registeredUsers here
+        console.log('Registration successful:', data);
 
-        // Show success message
-        showNotification(`Registration successful! Welcome to Federico VCF Tanzania`, "success");
+        // Show success message with ACTUAL name
+        showNotification(`Registration successful! Welcome ${name} to Federico VCF Tanzania`, "success");
         
         // Clear form
         document.getElementById('userName').value = '';
@@ -312,6 +312,10 @@ async function handleRegistration() {
     } catch (error) {
         console.error('Registration error:', error);
         showNotification('Registration failed. Please try again.', 'error');
+    } finally {
+        // Re-enable button
+        registerBtn.disabled = false;
+        registerBtn.innerHTML = '<i class="fas fa-user-plus"></i> Register Now';
     }
 }
 
@@ -350,17 +354,17 @@ async function handleVcfDownload() {
     }
 }
 
-// Generate VCF content from users data
+// Generate VCF content from users data - CLEAN NAMES ONLY
 function generateVcfFromUsers(users) {
     let vcfContent = '';
     
     users.forEach((user, index) => {
+        // Use EXACT name as provided - no additions
         vcfContent += `BEGIN:VCARD
 VERSION:3.0
-FN:${user.name || 'Federico User'}
+FN:${user.name}
 EMAIL:${user.email}
 TEL:${user.phone}
-NOTE:Registered user #${index + 1} - Federico VCF Tanzania
 END:VCARD
 
 `;
@@ -384,6 +388,7 @@ function validatePhone(phone) {
 
 // Show notification
 function showNotification(message, type) {
+    console.log("Showing notification:", message, type);
     notificationEl.textContent = message;
     notificationEl.className = `notification ${type} show`;
     
