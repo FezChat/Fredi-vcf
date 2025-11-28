@@ -2,11 +2,14 @@
 const SUPABASE_URL = 'https://xhsnuyouuzwrktyisnhv.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhoc251eW91dXp3cmt0eWlzbmh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzMDAyNjIsImV4cCI6MjA3OTg3NjI2Mn0.vUuFmMKUS8H5fYqStvWv8lQN-mnRfvBb-uGQd7LAZuE';
 
+// Initialize Supabase client
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 // Application State
 let registeredUsers = 0;
 const targetUsers = 500;
 let countdownDate = new Date();
-countdownDate.setDate(countdownDate.getDate() + 5); // 5 days from now
+countdownDate.setDate(countdownDate.getDate() + 5);
 
 // DOM Elements
 const mainDashboard = document.getElementById('mainDashboard');
@@ -26,32 +29,71 @@ const profilePreview = document.getElementById('profilePreview');
 const userPhotoInput = document.getElementById('userPhoto');
 
 // Initialize the application
-function initApp() {
+async function initApp() {
     updateDashboard();
     startCountdown();
     setupEventListeners();
-    // Start with empty data - will be populated from Supabase
-    loadRegistrationData();
+    await loadRegistrationData();
+    setupRealtimeSubscription();
 }
 
 // Load registration data from Supabase
 async function loadRegistrationData() {
     try {
-        // In a real implementation, you would fetch from Supabase
-        // const { data, error } = await supabase.from('registrations').select('*');
-        // registeredUsers = data.length;
-        
-        // For demo, we'll start with 0 and simulate real-time updates
-        registeredUsers = 0;
+        const { data, error } = await supabase
+            .from('registrations')
+            .select('*');
+
+        if (error) {
+            console.error('Error loading registration data:', error);
+            showNotification('Error loading registration data', 'error');
+            return;
+        }
+
+        registeredUsers = data ? data.length : 0;
         updateDashboard();
-        
-        // Simulate real-time updates (replace with Supabase real-time subscription)
-        simulateRealTimeUpdates();
-        
+
+        // Check if target is already reached
+        if (registeredUsers >= targetUsers) {
+            showVcfDashboard();
+        }
+
     } catch (error) {
         console.error('Error loading registration data:', error);
         showNotification('Error loading registration data', 'error');
     }
+}
+
+// Setup real-time subscription for new registrations
+function setupRealtimeSubscription() {
+    const subscription = supabase
+        .channel('registrations')
+        .on('postgres_changes', 
+            { 
+                event: 'INSERT', 
+                schema: 'public', 
+                table: 'registrations' 
+            }, 
+            (payload) => {
+                // New registration added
+                registeredUsers++;
+                updateDashboard();
+                
+                // Show progress notification occasionally
+                if (registeredUsers % 50 === 0) {
+                    showNotification(`We've reached ${registeredUsers} registrations! Keep sharing!`, "info");
+                }
+                
+                // If target is reached, show VCF dashboard
+                if (registeredUsers >= targetUsers) {
+                    showVcfDashboard();
+                    showNotification("Target achieved! VCF file is now available", "success");
+                }
+            }
+        )
+        .subscribe();
+
+    return subscription;
 }
 
 // Update dashboard with current data
@@ -173,6 +215,7 @@ async function handleRegistration() {
     const name = document.getElementById('userName').value.trim();
     const email = document.getElementById('userEmail').value.trim();
     const phone = document.getElementById('userPhone').value.trim();
+    const profileFile = userPhotoInput.files[0];
     
     // Validation
     if (!name || !email || !phone) {
@@ -189,19 +232,68 @@ async function handleRegistration() {
         showNotification("Please enter a valid phone number", "error");
         return;
     }
+
+    // Check if user already exists
+    const { data: existingUser } = await supabase
+        .from('registrations')
+        .select('id')
+        .eq('email', email)
+        .single();
+
+    if (existingUser) {
+        showNotification("This email is already registered", "error");
+        return;
+    }
     
     try {
-        // In a real implementation, you would save to Supabase
-        // const { data, error } = await supabase
-        //     .from('registrations')
-        //     .insert([{ name, email, phone, profile_picture: profilePictureUrl }]);
-        
-        // For demo, we'll simulate successful registration
-        registeredUsers++;
-        updateDashboard();
-        
+        let profilePictureUrl = null;
+
+        // Upload profile picture if provided
+        if (profileFile) {
+            const fileExt = profileFile.name.split('.').pop();
+            const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+            
+            const { data: uploadData, error: uploadError } = await supabase.storage
+                .from('profile-pictures')
+                .upload(fileName, profileFile);
+
+            if (uploadError) {
+                console.error('Error uploading profile picture:', uploadError);
+            } else {
+                // Get public URL
+                const { data: urlData } = supabase.storage
+                    .from('profile-pictures')
+                    .getPublicUrl(fileName);
+                
+                profilePictureUrl = urlData.publicUrl;
+            }
+        }
+
+        // Save registration to database
+        const { data, error } = await supabase
+            .from('registrations')
+            .insert([
+                { 
+                    name: name, 
+                    email: email, 
+                    phone: phone, 
+                    profile_picture: profilePictureUrl,
+                    created_at: new Date().toISOString()
+                }
+            ])
+            .select();
+
+        if (error) {
+            console.error('Registration error:', error);
+            showNotification('Registration failed. Please try again.', 'error');
+            return;
+        }
+
+        // Note: The real-time subscription will update the count automatically
+        // So we don't need to manually increment registeredUsers here
+
         // Show success message
-        showNotification(`Registration successful! You are user #${registeredUsers}`, "success");
+        showNotification(`Registration successful! Welcome to Federico VCF Tanzania`, "success");
         
         // Clear form
         document.getElementById('userName').value = '';
@@ -224,41 +316,57 @@ async function handleRegistration() {
 }
 
 // Handle VCF download
-function handleVcfDownload() {
-    // In a real app, this would download the actual VCF file from Supabase
-    // For demo, we'll create a simple VCF file
-    const vcfContent = createSampleVcf();
-    const blob = new Blob([vcfContent], { type: 'text/vcard' });
-    const url = URL.createObjectURL(blob);
-    
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'federico-contacts.vcf';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    showNotification("VCF file downloaded successfully! Follow the instructions to import.", "success");
+async function handleVcfDownload() {
+    try {
+        // Fetch all registered users
+        const { data: users, error } = await supabase
+            .from('registrations')
+            .select('name, email, phone')
+            .order('created_at', { ascending: true });
+
+        if (error) {
+            console.error('Error fetching users:', error);
+            showNotification('Error generating VCF file', 'error');
+            return;
+        }
+
+        // Generate VCF content
+        const vcfContent = generateVcfFromUsers(users);
+        const blob = new Blob([vcfContent], { type: 'text/vcard' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `federico-contacts-${new Date().toISOString().split('T')[0]}.vcf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        showNotification("VCF file downloaded successfully! Follow the instructions to import.", "success");
+    } catch (error) {
+        console.error('VCF download error:', error);
+        showNotification('Error downloading VCF file', 'error');
+    }
 }
 
-// Create sample VCF content
-function createSampleVcf() {
-    return `BEGIN:VCARD
+// Generate VCF content from users data
+function generateVcfFromUsers(users) {
+    let vcfContent = '';
+    
+    users.forEach((user, index) => {
+        vcfContent += `BEGIN:VCARD
 VERSION:3.0
-FN:Federico Community
-ORG:Federico VCF Tanzania
-TEL:+255752593977
-EMAIL:frediezra360@gmail.com 
+FN:${user.name || 'Federico User'}
+EMAIL:${user.email}
+TEL:${user.phone}
+NOTE:Registered user #${index + 1} - Federico VCF Tanzania
 END:VCARD
 
-BEGIN:VCARD
-VERSION:3.0
-FN:Fredi Ezra
-ORG:Federico Developer
-TEL:+255764182801
-EMAIL:frediezra360@gmail.com 
-END:VCARD`;
+`;
+    });
+    
+    return vcfContent;
 }
 
 // Validate email format
@@ -269,9 +377,9 @@ function validateEmail(email) {
 
 // Validate phone format
 function validatePhone(phone) {
-    // Basic phone validation - adjust for your needs
-    const re = /^[\+]?[0-9\s\-\(\)]{10,}$/;
-    return re.test(phone);
+    // Remove all non-digit characters except +
+    const cleanedPhone = phone.replace(/[^\d+]/g, '');
+    return cleanedPhone.length >= 10;
 }
 
 // Show notification
@@ -282,30 +390,6 @@ function showNotification(message, type) {
     setTimeout(() => {
         notificationEl.classList.remove('show');
     }, 5000);
-}
-
-// Simulate real-time updates (replace with Supabase real-time)
-function simulateRealTimeUpdates() {
-    // This would be replaced with Supabase real-time subscription
-    setInterval(() => {
-        // In real app, this would come from Supabase real-time updates
-        // For demo, we'll occasionally add a user
-        if (Math.random() > 0.7 && registeredUsers < targetUsers) {
-            registeredUsers++;
-            updateDashboard();
-            
-            // Show progress notification occasionally
-            if (registeredUsers % 50 === 0) {
-                showNotification(`We've reached ${registeredUsers} registrations! Keep sharing!`, "info");
-            }
-            
-            // If target is reached, show VCF dashboard
-            if (registeredUsers >= targetUsers) {
-                showVcfDashboard();
-                showNotification("Target achieved! VCF file is now available", "success");
-            }
-        }
-    }, 10000); // Check every 10 seconds
 }
 
 // Initialize the app when the page loads
