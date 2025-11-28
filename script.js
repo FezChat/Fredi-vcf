@@ -2,7 +2,7 @@
 const SUPABASE_URL = 'https://xhsnuyouuzwrktyisnhv.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhoc251eW91dXp3cmt0eWlzbmh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzMDAyNjIsImV4cCI6MjA3OTg3NjI2Mn0.vUuFmMKUS8H5fYqStvWv8lQN-mnRfvBb-uGQd7LAZuE';
 
-// Initialize Supabase client - FIXED
+// Initialize Supabase client - FIXED VERSION
 const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Application State
@@ -28,9 +28,15 @@ const finalCountEl = document.getElementById('finalCount');
 const profilePreview = document.getElementById('profilePreview');
 const userPhotoInput = document.getElementById('userPhoto');
 
+// Debug function
+function debugLog(message, data = null) {
+    console.log(`[DEBUG] ${message}`, data || '');
+    // You can also show this in a debug div if needed
+}
+
 // Initialize the application
 async function initApp() {
-    console.log("Initializing app...");
+    debugLog("🚀 Initializing app...");
     updateDashboard();
     startCountdown();
     setupEventListeners();
@@ -41,37 +47,38 @@ async function initApp() {
 // Load registration data from Supabase
 async function loadRegistrationData() {
     try {
-        console.log("Loading registration data...");
+        debugLog("📊 Loading registration data from Supabase...");
+        
         const { data, error, count } = await supabase
             .from('registrations')
             .select('*', { count: 'exact' });
 
         if (error) {
-            console.error('Error loading registration data:', error);
-            showNotification('Error loading registration data: ' + error.message, 'error');
+            debugLog("❌ Error loading data:", error);
+            showNotification('Error loading registration data', 'error');
             return;
         }
 
         registeredUsers = count || 0;
-        console.log("Loaded users:", registeredUsers);
+        debugLog(`✅ Loaded ${registeredUsers} users from database`);
         updateDashboard();
 
-        // Check if target is already reached
         if (registeredUsers >= targetUsers) {
             showVcfDashboard();
         }
 
     } catch (error) {
-        console.error('Error loading registration data:', error);
+        debugLog("❌ Catch error loading data:", error);
         showNotification('Error loading registration data', 'error');
     }
 }
 
-// Setup real-time subscription for new registrations
+// Setup real-time subscription
 function setupRealtimeSubscription() {
-    console.log("Setting up real-time subscription...");
+    debugLog("🔔 Setting up real-time subscription...");
+    
     const subscription = supabase
-        .channel('registrations')
+        .channel('public:registrations')
         .on('postgres_changes', 
             { 
                 event: 'INSERT', 
@@ -79,57 +86,49 @@ function setupRealtimeSubscription() {
                 table: 'registrations' 
             }, 
             (payload) => {
-                console.log('New registration received:', payload);
-                // New registration added
+                debugLog("🆕 New registration received:", payload);
                 registeredUsers++;
                 updateDashboard();
                 
-                // Show progress notification occasionally
                 if (registeredUsers % 50 === 0) {
                     showNotification(`We've reached ${registeredUsers} registrations! Keep sharing!`, "info");
                 }
                 
-                // If target is reached, show VCF dashboard
                 if (registeredUsers >= targetUsers) {
                     showVcfDashboard();
-                    showNotification("Target achieved! VCF file is now available", "success");
+                    showNotification("🎉 Target achieved! VCF file is now available", "success");
                 }
             }
         )
         .subscribe((status) => {
-            console.log('Subscription status:', status);
+            debugLog("📡 Subscription status:", status);
         });
 
     return subscription;
 }
 
-// Update dashboard with current data
+// Update dashboard
 function updateDashboard() {
     const progress = (registeredUsers / targetUsers) * 100;
     const remaining = targetUsers - registeredUsers;
     
-    console.log("Updating dashboard - Registered:", registeredUsers, "Progress:", progress);
+    debugLog(`📈 Dashboard update - Registered: ${registeredUsers}, Progress: ${progress}%`);
     
-    // Update circle values
     registeredCountEl.textContent = registeredUsers;
     remainingCountEl.textContent = remaining;
-    
-    // Update progress bars
     progressFillEl.style.width = `${progress}%`;
     progressPercentageEl.textContent = `${Math.round(progress)}%`;
     progressTextEl.textContent = `${registeredUsers} of ${targetUsers} registered`;
     
-    // Update circle progress animations
     updateCircleProgress('.circle-card.primary .circle-progress', progress);
     updateCircleProgress('.circle-card.success .circle-progress', (remaining / targetUsers) * 100);
     
-    // Check if target is reached
     if (registeredUsers >= targetUsers) {
         showVcfDashboard();
     }
 }
 
-// Update circle progress animation
+// Update circle progress
 function updateCircleProgress(selector, progress) {
     const circle = document.querySelector(selector);
     if (circle) {
@@ -137,7 +136,7 @@ function updateCircleProgress(selector, progress) {
     }
 }
 
-// Start the countdown timer
+// Countdown timer
 function startCountdown() {
     function updateTimer() {
         const now = new Date().getTime();
@@ -157,7 +156,6 @@ function startCountdown() {
         
         countdownTimerEl.textContent = `${days}d ${hours}h ${minutes}m ${seconds}s`;
         
-        // Update message based on progress
         if (registeredUsers >= targetUsers) {
             timerMessageEl.textContent = "Target achieved! VCF file is now available";
         } else if (days === 0) {
@@ -171,7 +169,6 @@ function startCountdown() {
     setInterval(updateTimer, 1000);
 }
 
-// Check if target was achieved before time ended
 function checkTargetAchievement() {
     if (registeredUsers >= targetUsers) {
         showNotification("Target achieved! VCF file is now available", "success");
@@ -181,7 +178,6 @@ function checkTargetAchievement() {
     }
 }
 
-// Show VCF dashboard
 function showVcfDashboard() {
     mainDashboard.style.display = 'none';
     vcfDashboard.style.display = 'block';
@@ -190,27 +186,21 @@ function showVcfDashboard() {
 
 // Setup event listeners
 function setupEventListeners() {
-    console.log("Setting up event listeners...");
-    // Registration button
+    debugLog("🔗 Setting up event listeners...");
+    
     registerBtn.addEventListener('click', handleRegistration);
-    
-    // Profile picture upload
     userPhotoInput.addEventListener('change', handleProfilePictureUpload);
-    
-    // Download VCF button
     downloadVcfBtn.addEventListener('click', handleVcfDownload);
+    
+    debugLog("✅ Event listeners setup complete");
 }
 
-// Handle profile picture upload
 function handleProfilePictureUpload(event) {
     const file = event.target.files[0];
     if (file) {
         const reader = new FileReader();
         reader.onload = function(e) {
-            // Clear existing content
             profilePreview.innerHTML = '';
-            
-            // Create and add image
             const img = document.createElement('img');
             img.src = e.target.result;
             img.alt = 'Profile Preview';
@@ -220,15 +210,15 @@ function handleProfilePictureUpload(event) {
     }
 }
 
-// Handle user registration - SIMPLIFIED VERSION
+// Handle user registration - SIMPLIFIED AND DEBUGGED
 async function handleRegistration() {
-    console.log("Registration button clicked");
+    debugLog("🖱️ Register button clicked");
     
     const name = document.getElementById('userName').value.trim();
     const email = document.getElementById('userEmail').value.trim();
     const phone = document.getElementById('userPhone').value.trim();
     
-    console.log("Form data:", { name, email, phone });
+    debugLog("📝 Form data:", { name, email, phone });
     
     // Validation
     if (!name || !email || !phone) {
@@ -246,12 +236,14 @@ async function handleRegistration() {
         return;
     }
 
-    // Disable button to prevent double registration
+    // Disable button
     registerBtn.disabled = true;
-    registerBtn.textContent = 'Registering...';
+    registerBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registering...';
 
     try {
-        // Check if user already exists
+        debugLog("🔍 Checking if user exists...");
+        
+        // Check if user exists
         const { data: existingUser, error: checkError } = await supabase
             .from('registrations')
             .select('id')
@@ -259,17 +251,19 @@ async function handleRegistration() {
             .maybeSingle();
 
         if (checkError) {
-            console.error('Error checking existing user:', checkError);
+            debugLog("❌ Error checking user:", checkError);
         }
 
         if (existingUser) {
             showNotification("This email is already registered", "error");
             registerBtn.disabled = false;
-            registerBtn.textContent = 'Register Now';
+            registerBtn.innerHTML = '<i class="fas fa-user-plus"></i> Register Now';
             return;
         }
         
-        // Save registration to database - WITHOUT profile picture first
+        debugLog("💾 Saving to database...");
+        
+        // Save to database
         const { data, error } = await supabase
             .from('registrations')
             .insert([
@@ -283,34 +277,29 @@ async function handleRegistration() {
             .select();
 
         if (error) {
-            console.error('Registration error:', error);
+            debugLog("❌ Database error:", error);
             showNotification('Registration failed: ' + error.message, 'error');
             registerBtn.disabled = false;
-            registerBtn.textContent = 'Register Now';
+            registerBtn.innerHTML = '<i class="fas fa-user-plus"></i> Register Now';
             return;
         }
 
-        console.log('Registration successful:', data);
-
-        // Show success message with ACTUAL name
-        showNotification(`Registration successful! Welcome ${name} to Federico VCF Tanzania`, "success");
+        debugLog("✅ Registration successful:", data);
+        
+        // SUCCESS - Show notification immediately
+        showNotification(`✅ Registration successful! Welcome ${name}`, "success");
         
         // Clear form
         document.getElementById('userName').value = '';
         document.getElementById('userEmail').value = '';
         document.getElementById('userPhone').value = '';
         userPhotoInput.value = '';
-        
-        // Reset profile preview
         profilePreview.innerHTML = '<i class="fas fa-user"></i>';
         
-        // Show encouragement message
-        setTimeout(() => {
-            showNotification("Share the registration link with friends to help reach our target faster!", "info");
-        }, 3000);
+        // Real-time update will handle the count increment
         
     } catch (error) {
-        console.error('Registration error:', error);
+        debugLog("❌ Catch error:", error);
         showNotification('Registration failed. Please try again.', 'error');
     } finally {
         // Re-enable button
@@ -322,44 +311,39 @@ async function handleRegistration() {
 // Handle VCF download
 async function handleVcfDownload() {
     try {
-        // Fetch all registered users
         const { data: users, error } = await supabase
             .from('registrations')
             .select('name, email, phone')
             .order('created_at', { ascending: true });
 
         if (error) {
-            console.error('Error fetching users:', error);
             showNotification('Error generating VCF file', 'error');
             return;
         }
 
-        // Generate VCF content
         const vcfContent = generateVcfFromUsers(users);
         const blob = new Blob([vcfContent], { type: 'text/vcard' });
         const url = URL.createObjectURL(blob);
         
         const a = document.createElement('a');
         a.href = url;
-        a.download = `federico-contacts-${new Date().toISOString().split('T')[0]}.vcf`;
+        a.download = `federico-contacts.vcf`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         
-        showNotification("VCF file downloaded successfully! Follow the instructions to import.", "success");
+        showNotification("VCF file downloaded successfully!", "success");
     } catch (error) {
-        console.error('VCF download error:', error);
         showNotification('Error downloading VCF file', 'error');
     }
 }
 
-// Generate VCF content from users data - CLEAN NAMES ONLY
+// Generate VCF - CLEAN NAMES ONLY
 function generateVcfFromUsers(users) {
     let vcfContent = '';
     
-    users.forEach((user, index) => {
-        // Use EXACT name as provided - no additions
+    users.forEach((user) => {
         vcfContent += `BEGIN:VCARD
 VERSION:3.0
 FN:${user.name}
@@ -373,22 +357,20 @@ END:VCARD
     return vcfContent;
 }
 
-// Validate email format
+// Validation functions
 function validateEmail(email) {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return re.test(email);
 }
 
-// Validate phone format
 function validatePhone(phone) {
-    // Remove all non-digit characters except +
     const cleanedPhone = phone.replace(/[^\d+]/g, '');
     return cleanedPhone.length >= 10;
 }
 
 // Show notification
 function showNotification(message, type) {
-    console.log("Showing notification:", message, type);
+    debugLog(`💬 Notification: ${message}`, type);
     notificationEl.textContent = message;
     notificationEl.className = `notification ${type} show`;
     
@@ -397,5 +379,5 @@ function showNotification(message, type) {
     }, 5000);
 }
 
-// Initialize the app when the page loads
+// Initialize app
 document.addEventListener('DOMContentLoaded', initApp);
