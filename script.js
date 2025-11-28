@@ -2,8 +2,8 @@
 const SUPABASE_URL = 'https://xhsnuyouuzwrktyisnhv.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhoc251eW91dXp3cmt0eWlzbmh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzMDAyNjIsImV4cCI6MjA3OTg3NjI2Mn0.vUuFmMKUS8H5fYqStvWv8lQN-mnRfvBb-uGQd7LAZuE';
 
-// Initialize Supabase client - FIXED VERSION
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// Initialize Supabase client - CORRECTED
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Application State
 let registeredUsers = 0;
@@ -31,12 +31,27 @@ const userPhotoInput = document.getElementById('userPhoto');
 // Debug function
 function debugLog(message, data = null) {
     console.log(`[DEBUG] ${message}`, data || '');
-    // You can also show this in a debug div if needed
 }
 
 // Initialize the application
 async function initApp() {
     debugLog("🚀 Initializing app...");
+    
+    // Test Supabase connection first
+    try {
+        const { data, error } = await supabase.from('registrations').select('*').limit(1);
+        if (error) {
+            debugLog("❌ Supabase connection failed:", error);
+            showNotification('Database connection failed: ' + error.message, 'error');
+            return;
+        }
+        debugLog("✅ Supabase connected successfully");
+    } catch (error) {
+        debugLog("❌ Supabase connection error:", error);
+        showNotification('Database connection error', 'error');
+        return;
+    }
+    
     updateDashboard();
     startCountdown();
     setupEventListeners();
@@ -55,7 +70,7 @@ async function loadRegistrationData() {
 
         if (error) {
             debugLog("❌ Error loading data:", error);
-            showNotification('Error loading registration data', 'error');
+            showNotification('Error loading registration data: ' + error.message, 'error');
             return;
         }
 
@@ -77,34 +92,41 @@ async function loadRegistrationData() {
 function setupRealtimeSubscription() {
     debugLog("🔔 Setting up real-time subscription...");
     
-    const subscription = supabase
-        .channel('public:registrations')
-        .on('postgres_changes', 
-            { 
-                event: 'INSERT', 
-                schema: 'public', 
-                table: 'registrations' 
-            }, 
-            (payload) => {
-                debugLog("🆕 New registration received:", payload);
-                registeredUsers++;
-                updateDashboard();
-                
-                if (registeredUsers % 50 === 0) {
-                    showNotification(`We've reached ${registeredUsers} registrations! Keep sharing!`, "info");
+    try {
+        const subscription = supabase
+            .channel('public:registrations')
+            .on('postgres_changes', 
+                { 
+                    event: 'INSERT', 
+                    schema: 'public', 
+                    table: 'registrations' 
+                }, 
+                (payload) => {
+                    debugLog("🆕 New registration received:", payload);
+                    registeredUsers++;
+                    updateDashboard();
+                    
+                    if (registeredUsers % 50 === 0) {
+                        showNotification(`We've reached ${registeredUsers} registrations! Keep sharing!`, "info");
+                    }
+                    
+                    if (registeredUsers >= targetUsers) {
+                        showVcfDashboard();
+                        showNotification("🎉 Target achieved! VCF file is now available", "success");
+                    }
                 }
-                
-                if (registeredUsers >= targetUsers) {
-                    showVcfDashboard();
-                    showNotification("🎉 Target achieved! VCF file is now available", "success");
+            )
+            .subscribe((status) => {
+                debugLog("📡 Subscription status:", status);
+                if (status === 'SUBSCRIBED') {
+                    debugLog("✅ Real-time subscription active");
                 }
-            }
-        )
-        .subscribe((status) => {
-            debugLog("📡 Subscription status:", status);
-        });
+            });
 
-    return subscription;
+        return subscription;
+    } catch (error) {
+        debugLog("❌ Real-time subscription error:", error);
+    }
 }
 
 // Update dashboard
@@ -210,7 +232,7 @@ function handleProfilePictureUpload(event) {
     }
 }
 
-// Handle user registration - SIMPLIFIED AND DEBUGGED
+// Handle user registration - FIXED VERSION
 async function handleRegistration() {
     debugLog("🖱️ Register button clicked");
     
@@ -252,6 +274,7 @@ async function handleRegistration() {
 
         if (checkError) {
             debugLog("❌ Error checking user:", checkError);
+            throw new Error('Database error: ' + checkError.message);
         }
 
         if (existingUser) {
@@ -263,7 +286,7 @@ async function handleRegistration() {
         
         debugLog("💾 Saving to database...");
         
-        // Save to database
+        // Save to database - SIMPLIFIED (no profile picture first)
         const { data, error } = await supabase
             .from('registrations')
             .insert([
@@ -278,16 +301,13 @@ async function handleRegistration() {
 
         if (error) {
             debugLog("❌ Database error:", error);
-            showNotification('Registration failed: ' + error.message, 'error');
-            registerBtn.disabled = false;
-            registerBtn.innerHTML = '<i class="fas fa-user-plus"></i> Register Now';
-            return;
+            throw new Error('Registration failed: ' + error.message);
         }
 
         debugLog("✅ Registration successful:", data);
         
         // SUCCESS - Show notification immediately
-        showNotification(`✅ Registration successful! Welcome ${name}`, "success");
+        showNotification(`✅ Registration successful! Welcome ${name} to Federico VCF Tanzania`, "success");
         
         // Clear form
         document.getElementById('userName').value = '';
@@ -299,12 +319,14 @@ async function handleRegistration() {
         // Real-time update will handle the count increment
         
     } catch (error) {
-        debugLog("❌ Catch error:", error);
-        showNotification('Registration failed. Please try again.', 'error');
+        debugLog("❌ Registration error:", error);
+        showNotification(error.message, 'error');
     } finally {
         // Re-enable button
-        registerBtn.disabled = false;
-        registerBtn.innerHTML = '<i class="fas fa-user-plus"></i> Register Now';
+        setTimeout(() => {
+            registerBtn.disabled = false;
+            registerBtn.innerHTML = '<i class="fas fa-user-plus"></i> Register Now';
+        }, 2000);
     }
 }
 
@@ -317,7 +339,7 @@ async function handleVcfDownload() {
             .order('created_at', { ascending: true });
 
         if (error) {
-            showNotification('Error generating VCF file', 'error');
+            showNotification('Error generating VCF file: ' + error.message, 'error');
             return;
         }
 
@@ -335,20 +357,28 @@ async function handleVcfDownload() {
         
         showNotification("VCF file downloaded successfully!", "success");
     } catch (error) {
-        showNotification('Error downloading VCF file', 'error');
+        showNotification('Error downloading VCF file: ' + error.message, 'error');
     }
 }
 
 // Generate VCF - CLEAN NAMES ONLY
 function generateVcfFromUsers(users) {
+    if (!users || users.length === 0) {
+        return `BEGIN:VCARD
+VERSION:3.0
+FN:Federico VCF Tanzania
+NOTE:No contacts available yet
+END:VCARD`;
+    }
+    
     let vcfContent = '';
     
     users.forEach((user) => {
         vcfContent += `BEGIN:VCARD
 VERSION:3.0
-FN:${user.name}
-EMAIL:${user.email}
-TEL:${user.phone}
+FN:${user.name || 'Federico User'}
+EMAIL:${user.email || 'no-email@federico.com'}
+TEL:${user.phone || '+255000000000'}
 END:VCARD
 
 `;
